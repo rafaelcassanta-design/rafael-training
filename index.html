@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Treino">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Rafael Training Beta</title>
+  <title>Rafael Training Beta 1.1</title>
   <style>
     :root{
       --bg:#f5f7fa; --card:#ffffff; --text:#17212b; --muted:#66717d;
@@ -55,7 +55,7 @@
 <body>
 <div class="app">
   <div class="top">
-    <div><div class="eyebrow">Ficha atual</div><h1 id="title">Treino A — Segunda</h1></div>
+    <div><div><div class="eyebrow">Ficha atual</div><h1 id="title">Treino A — Segunda</h1><div class="mini">Beta 1.1</div></div>
     <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
   </div>
 
@@ -95,7 +95,7 @@
   </div>
 
   <div class="footer-actions">
-    <button id="reportBtn" class="primary" style="width:100%">GERAR RELATÓRIO</button>
+    <button id="reportBtn" class="primary" style="width:100%" disabled>GERAR RELATÓRIO</button><div id="reportHint" class="status">Encerre o treino para liberar o relatório.</div>
     <button id="clearBtn" style="width:100%;margin-top:8px">Limpar treino atual</button>
   </div>
 
@@ -114,14 +114,14 @@ const workouts={
  ['Mesa flexora','2x12','2','t'],['Bíceps na polia','2x12','3','t'],
  ['Puxada frontal','3x12','4','t'],['Desenvolvimento','2x12','5','kg cada'],
  ['Remada baixa','2x12','3','t'],['Panturrilha sentada','2x15','10','kg'],
- ['Tríceps corda','2x12','4','t'],['Flexão de punho / antebraço','2x15','','leve']]},
+ ['Tríceps corda','2x12','4','t'],['Flexão de punho / antebraço','2x15','leve','']]},
  B:{title:'Treino B — Quarta',ex:[
  ['Leg press','4x10','45','kg'],['Supino inclinado halteres','3x12','7','kg cada'],
  ['Mesa flexora','3x12','2','t'],['Tríceps na polia','3x12','3','t'],
  ['Cadeira abdutora','3x15','6','t'],['Rosca alternada','3x12','6','kg cada'],
  ['Puxada frontal','3x12','4','t'],['Elevação lateral','3x12','3','kg cada'],
- ['Remada com peito apoiado','3x12','5','kg/lado'],['Dead bug','2x8/lado','','peso corporal'],
- ['Prancha lateral','2x30s/lado','','peso corporal']]},
+ ['Remada com peito apoiado','3x12','5','kg/lado'],['Dead bug','2x8/lado','peso do corpo',''],
+ ['Prancha lateral','2x30s/lado','peso do corpo','']]},
  C:{title:'Treino C — Sexta',ex:[
  ['Cadeira extensora','2x12','2','t'],['Supino reto com halteres','2x12','6','kg cada'],
  ['Pallof press','2x12/lado','2','t'],['Cadeira abdutora','2x15','6','t'],
@@ -153,81 +153,120 @@ function scoreGrid(id,out,setter,initial){
 
 function render(){
  $('#title').textContent=workouts[current].title;
- $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.key===current));
- const list=$('#exerciseList'); list.innerHTML='';
- workouts[current].ex.forEach((e,i)=>{
-   const saved=states[current][i]||{};
-   const card=document.createElement('div'); card.className='card';
-   card.innerHTML=`<div class="card-title">
-     <div><strong>${e[0]}</strong><div class="planned">Planejado: ${e[1]}${e[2]?' • '+e[2]+' '+e[3]:' • '+e[3]}</div></div>
-     <label class="check"><input class="done" type="checkbox" ${saved.done?'checked':''}> Feito</label>
-   </div>
-   <div class="row" style="margin-top:10px">
-     <div><label class="small">Séries/reps</label><input class="sets" type="text" value="${saved.sets??e[1]}"></div>
-     <div><label class="small">Carga</label><input class="load" type="text" inputmode="decimal" value="${saved.load??e[2]}" placeholder="—"></div>
-   </div>
-   <div class="mini" style="margin-top:10px;font-weight:700">Esforço</div><div class="effort-grid effort" style="margin-top:6px"></div>
-   <div class="mini" style="margin-top:10px;font-weight:700">Dor/desconforto</div>
-   <div class="pain-grid pain" style="margin-top:6px">
-     <button type="button" data-v="Não" class="${saved.pain==='Não'?'active':''}">Não</button>
-     <button type="button" data-v="Sim" class="${saved.pain==='Sim'?'active':''}">Sim</button>
-   </div>
-   <textarea class="note" style="margin-top:10px" placeholder="Observação deste exercício (opcional)">${saved.note||''}</textarea>`;
-   const eff=card.querySelector('.effort');
-   efforts.forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v;b.dataset.v=v;if(saved.effort===v)b.classList.add('active');eff.appendChild(b)});
-   function persist(){
-     states[current][i]={
-       done:card.querySelector('.done').checked,
-       sets:card.querySelector('.sets').value.trim(),
-       load:card.querySelector('.load').value.trim(),
-       effort:card.querySelector('.effort .active')?.dataset.v||'',
-       pain:card.querySelector('.pain .active')?.dataset.v||'',
-       note:card.querySelector('.note').value.trim()
-     }; save();
-   }
-   card.addEventListener('input',persist); card.addEventListener('change',persist);
-   eff.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;[...eff.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');persist()});
-   card.querySelector('.pain').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;[...card.querySelector('.pain').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');persist()});
-   list.appendChild(card);
- });
+ function completedCount(){
+  return workouts[current].ex.reduce((n,_,i)=>n+(states[current]?.[i]?.done?1:0),0);
 }
-current=meta.current||'A'; disposition=meta.disposition||null; overallRpe=meta.overallRpe||null; $('#generalNotes').value=meta.notes||'';
-scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);
-scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);
-render();
+function updateProgress(){
+  let el=document.getElementById('progressInfo');
+  if(!el){
+    el=document.createElement('div');
+    el.id='progressInfo';
+    el.className='status';
+    document.getElementById('timeInfo').after(el);
+  }
+  el.textContent=`${completedCount()} de ${workouts[current].ex.length} exercícios concluídos`;
+}
+function setReportState(){
+  $('#reportBtn').disabled=!ended;
+  $('#reportHint').textContent=ended?'Treino encerrado. Relatório liberado.':'Encerre o treino para liberar o relatório.';
+}
+function formatLoad(v,unit){
+  v=(v??'').trim();
+  if(!v) return 'não informado';
+  return unit ? `${v} ${unit}` : v;
+}
+function finishWorkout(){
+  ended=new Date();
+  clearInterval(ticker); ticker=null;
+  $('#stop').disabled=true;
+  showTimer();
+  $('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;
+  setReportState();
+}
 
-$$('.tab').forEach(b=>b.addEventListener('click',()=>{current=b.dataset.key;save();render()}));
-$('#start').addEventListener('click',()=>{if(started)return;started=new Date();ended=null;$('#start').disabled=true;$('#stop').disabled=false;$('#timeInfo').textContent=`Início: ${hhmm(started)}`;showTimer();ticker=setInterval(showTimer,1000)});
-$('#stop').addEventListener('click',()=>{if(!started||ended)return;ended=new Date();clearInterval(ticker);ticker=null;$('#stop').disabled=true;showTimer();$('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`});
+$$('.tab').forEach(b=>b.addEventListener('click',()=>{
+  if(started && !ended){ alert('Encerre o treino atual antes de trocar de ficha.'); return; }
+  current=b.dataset.key; started=null; ended=null;
+  $('#timer').textContent='00:00:00';
+  $('#start').disabled=false; $('#stop').disabled=true;
+  $('#timeInfo').textContent='Pronto para iniciar.';
+  $('#reportWrap').hidden=true; setReportState(); save(); render(); updateProgress();
+}));
+
+$('#start').addEventListener('click',()=>{
+  if(started && !ended)return;
+  started=new Date(); ended=null;
+  $('#start').disabled=true; $('#stop').disabled=false;
+  $('#timeInfo').textContent=`Início: ${hhmm(started)}`;
+  $('#reportWrap').hidden=true; setReportState();
+  showTimer(); ticker=setInterval(showTimer,1000);
+});
+
+$('#stop').addEventListener('click',()=>{
+  if(!started||ended)return;
+  const pending=workouts[current].ex
+    .map((e,i)=>({name:e[0],done:!!states[current]?.[i]?.done}))
+    .filter(x=>!x.done);
+
+  if(pending.length){
+    const nomes=pending.map(x=>`• ${x.name}`).join('\n');
+    const ok=confirm(`Os seguintes exercícios não foram marcados como Feito:\n\n${nomes}\n\nDeseja encerrar o treino mesmo assim?`);
+    if(!ok) return;
+  }
+  finishWorkout();
+});
+
 $('#generalNotes').addEventListener('input',save);
 
 $('#clearBtn').addEventListener('click',()=>{
  if(!confirm('Limpar apenas os registros do treino '+current+'?'))return;
- states[current]={}; save(); render(); $('#reportWrap').hidden=true;
+ states[current]={};
+ started=null; ended=null;
+ if(ticker){clearInterval(ticker);ticker=null}
+ $('#timer').textContent='00:00:00';
+ $('#start').disabled=false; $('#stop').disabled=true;
+ $('#timeInfo').textContent='Pronto para iniciar.';
+ $('#reportWrap').hidden=true;
+ save(); render(); updateProgress(); setReportState();
 });
 
 $('#reportBtn').addEventListener('click',()=>{
+ if(!ended){ alert('Encerre o treino antes de gerar o relatório.'); return; }
+
  const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';
  const lines=[`*_${day} (Treino ${current})_*`,''];
  if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);
  if(started)lines.push(`Início treino ${hhmm(started)}`);
  lines.push('');
+
  workouts[current].ex.forEach((e,i)=>{
-   const s=states[current][i]||{};
+   const st=states[current][i]||{};
    lines.push(`*${e[0]}*`);
-   lines.push(`Série: ${s.sets||e[1]}`);
-   const lv=(s.load??e[2]);
-   lines.push(`Carga: ${lv?lv+' '+e[3]:'peso do corpo'}`);
-   lines.push(`Esforço: ${s.effort||'não informado'}`);
-   lines.push(`Dor/desconforto: ${s.pain||'não informado'}`);
-   if(s.note)lines.push(`Observação: ${s.note}`);
+   if(!st.done){
+     lines.push('Status: Não realizado','');
+     return;
+   }
+   lines.push(`Série: ${st.sets||e[1]}`);
+   lines.push(`Carga: ${formatLoad((st.load??e[2]),e[3])}`);
+   lines.push(`Esforço: ${st.effort||'não informado'}`);
+   lines.push(`Dor/desconforto: ${st.pain||'não informado'}`);
+   if(st.note)lines.push(`Observação: ${st.note}`);
    lines.push('');
  });
- if(ended)lines.push(`Término: ${hhmm(ended)}`,`Duração: ${Math.round(elapsed()/60)}min`);
+
+ lines.push(`Término: ${hhmm(ended)}`,`Duração: ${Math.round(elapsed()/60)}min`);
  if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);
- const gn=$('#generalNotes').value.trim(); if(gn)lines.push(`Observação geral: ${gn}`);
- $('#reportText').textContent=lines.join('\n'); $('#reportWrap').hidden=false; $('#reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
+ const gn=$('#generalNotes').value.trim();
+ if(gn)lines.push(`Observação geral: ${gn}`);
+
+ $('#reportText').textContent=lines.join('\n');
+ $('#reportWrap').hidden=false;
+ $('#reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
 });
+
+updateProgress();
+setReportState();
+
 $('#copyBtn').addEventListener('click',async()=>{
  const txt=$('#reportText').textContent;
  try{await navigator.clipboard.writeText(txt);$('#copyStatus').textContent='Relatório copiado.'}
