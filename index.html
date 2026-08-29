@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Treino">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Rafael Training Beta 1.3</title>
+  <title>Rafael Training Beta 1.4</title>
   <style>
     :root{
       --bg:#f5f7fa; --card:#ffffff; --text:#17212b; --muted:#66717d;
@@ -58,7 +58,7 @@
     <div>
       <div class="eyebrow">Ficha atual</div>
       <h1 id="title">Treino A — Segunda</h1>
-      <div class="mini">Beta 1.3 — relatório protegido</div>
+      <div class="mini">Beta 1.4 — data e horários automáticos</div>
     </div>
     <div class="timer">
       <div class="eyebrow">Tempo</div>
@@ -167,6 +167,7 @@ const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
 const pad=n=>String(n).padStart(2,'0');
 const hhmm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const ddmmyyyy=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
 
 function save(){
  localStorage.setItem('rt_states',JSON.stringify(states));
@@ -434,8 +435,12 @@ $('#reportBtn').addEventListener('click',()=>{
 
  const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';
  const lines=[`*_${day} (Treino ${current})_*`,''];
+ lines.push(`Data: ${ddmmyyyy(started)}`);
+ lines.push(`Início: ${hhmm(started)}`);
+ lines.push(`Término: ${hhmm(ended)}`);
+ lines.push(`Duração: ${Math.round(elapsed()/60)} min`);
  if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);
- lines.push(`Início treino ${hhmm(started)}`,'');
+ lines.push('');
 
  workouts[current].ex.forEach((e,i)=>{
    const st=states[current][i]||{};
@@ -452,7 +457,6 @@ $('#reportBtn').addEventListener('click',()=>{
    lines.push('');
  });
 
- lines.push(`Término: ${hhmm(ended)}`,`Duração: ${Math.round(elapsed()/60)}min`);
  if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);
  const gn=$('#generalNotes').value.trim();
  if(gn)lines.push(`Observação geral: ${gn}`);
