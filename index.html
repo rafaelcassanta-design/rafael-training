@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Treino">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Rafael Training Beta 1.1</title>
+  <title>Rafael Training Beta 1.2</title>
   <style>
     :root{
       --bg:#f5f7fa; --card:#ffffff; --text:#17212b; --muted:#66717d;
@@ -55,7 +55,7 @@
 <body>
 <div class="app">
   <div class="top">
-    <div><div><div class="eyebrow">Ficha atual</div><h1 id="title">Treino A — Segunda</h1><div class="mini">Beta 1.1</div></div>
+    <div><div><div class="eyebrow">Ficha atual</div><h1 id="title">Treino A — Segunda</h1><div class="mini">Beta 1.2 — relatório protegido</div></div>
     <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
   </div>
 
@@ -128,92 +128,285 @@ const workouts={
  ['Face pull','2x12','2','t'],['Remada com peito apoiado','2x12','5','kg/lado'],
  ['Rosca martelo','2x12','6','kg cada'],['Tríceps corda','2x12','4','t']]}
 };
+
 const efforts=['Leve','Leve/Médio','Médio','Médio/Pesado','Pesado'];
-let current='A', started=null, ended=null, ticker=null, disposition=null, overallRpe=null;
+const painOptions=['Sem dor','Com dor/desconforto'];
+
+let current='A';
+let started=null;
+let ended=null;
+let ticker=null;
+let disposition=null;
+let overallRpe=null;
+
 const states=JSON.parse(localStorage.getItem('rt_states')||'{"A":{},"B":{},"C":{}}');
 const meta=JSON.parse(localStorage.getItem('rt_meta')||'{}');
 
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
 const pad=n=>String(n).padStart(2,'0');
 const hhmm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
-function save(){ localStorage.setItem('rt_states',JSON.stringify(states)); localStorage.setItem('rt_meta',JSON.stringify({current,disposition,overallRpe,notes:$('#generalNotes').value})); }
-function elapsed(){return started?Math.max(0,Math.floor(((ended||new Date())-started)/1000)):0}
-function showTimer(){const s=elapsed();$('#timer').textContent=`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`}
+
+function save(){
+ localStorage.setItem('rt_states',JSON.stringify(states));
+ localStorage.setItem('rt_meta',JSON.stringify({
+   current,disposition,overallRpe,notes:$('#generalNotes').value
+ }));
+}
+
+function elapsed(){
+ return started ? Math.max(0,Math.floor(((ended||new Date())-started)/1000)) : 0;
+}
+
+function showTimer(){
+ const s=elapsed();
+ $('#timer').textContent=
+   `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
+}
 
 function scoreGrid(id,out,setter,initial){
- const box=$(id); box.innerHTML='';
+ const box=$(id);
+ box.innerHTML='';
  for(let i=1;i<=10;i++){
-   const b=document.createElement('button'); b.textContent=i; b.type='button';
+   const b=document.createElement('button');
+   b.textContent=i;
+   b.type='button';
    if(initial===i)b.classList.add('active');
-   b.addEventListener('click',()=>{[...box.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');$(out).textContent=i;setter(i);save()});
+   b.addEventListener('click',()=>{
+     [...box.children].forEach(x=>x.classList.remove('active'));
+     b.classList.add('active');
+     $(out).textContent=i;
+     setter(i);
+     save();
+   });
    box.appendChild(b);
  }
  $(out).textContent=initial||'—';
 }
 
+function completedCount(){
+ return workouts[current].ex.reduce(
+   (n,_,i)=>n+(states[current]?.[i]?.done?1:0),0
+ );
+}
+
+function updateProgress(){
+ let el=document.getElementById('progressInfo');
+ if(!el){
+   el=document.createElement('div');
+   el.id='progressInfo';
+   el.className='status';
+   document.getElementById('timeInfo').after(el);
+ }
+ el.textContent=`${completedCount()} de ${workouts[current].ex.length} exercícios concluídos`;
+}
+
+function setReportState(){
+ const liberado=Boolean(started && ended);
+ $('#reportBtn').disabled=!liberado;
+ $('#reportHint').textContent=liberado
+   ? 'Treino encerrado. Relatório liberado.'
+   : 'Encerre o treino para liberar o relatório.';
+}
+
+function formatLoad(v,unit){
+ v=String(v??'').trim();
+ if(!v) return 'não informado';
+ return unit ? `${v} ${unit}` : v;
+}
+
+function renderChoiceButtons(container,options,value,onChange){
+ container.innerHTML='';
+ options.forEach(opt=>{
+   const b=document.createElement('button');
+   b.type='button';
+   b.textContent=opt;
+   if(value===opt)b.classList.add('active');
+   b.addEventListener('click',()=>{
+     [...container.children].forEach(x=>x.classList.remove('active'));
+     b.classList.add('active');
+     onChange(opt);
+     save();
+   });
+   container.appendChild(b);
+ });
+}
+
 function render(){
  $('#title').textContent=workouts[current].title;
- function completedCount(){
-  return workouts[current].ex.reduce((n,_,i)=>n+(states[current]?.[i]?.done?1:0),0);
+ $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.key===current));
+
+ const list=$('#exerciseList');
+ list.innerHTML='';
+
+ workouts[current].ex.forEach((e,i)=>{
+   if(!states[current][i]) states[current][i]={};
+   const st=states[current][i];
+
+   const card=document.createElement('div');
+   card.className='card';
+
+   const head=document.createElement('div');
+   head.className='card-title';
+
+   const titleBox=document.createElement('div');
+   titleBox.innerHTML=`<strong>${e[0]}</strong><div class="planned">Planejado: ${e[1]} • ${formatLoad(e[2],e[3])}</div>`;
+
+   const doneLabel=document.createElement('label');
+   doneLabel.className='check';
+   const done=document.createElement('input');
+   done.type='checkbox';
+   done.checked=!!st.done;
+   doneLabel.append(done,document.createTextNode('Feito'));
+
+   done.addEventListener('change',()=>{
+     st.done=done.checked;
+     if(st.done) delete st.status;
+     updateProgress();
+     save();
+   });
+
+   head.append(titleBox,doneLabel);
+   card.appendChild(head);
+
+   const row=document.createElement('div');
+   row.className='row';
+   row.style.marginTop='10px';
+
+   const setsWrap=document.createElement('div');
+   setsWrap.innerHTML='<label class="small">Séries / repetições</label>';
+   const sets=document.createElement('input');
+   sets.type='text';
+   sets.value=st.sets??e[1];
+   sets.addEventListener('input',()=>{st.sets=sets.value;save();});
+   setsWrap.appendChild(sets);
+
+   const loadWrap=document.createElement('div');
+   loadWrap.innerHTML='<label class="small">Carga</label>';
+   const load=document.createElement('input');
+   load.type='text';
+   load.value=st.load??e[2];
+   load.addEventListener('input',()=>{st.load=load.value;save();});
+   loadWrap.appendChild(load);
+
+   row.append(setsWrap,loadWrap);
+   card.appendChild(row);
+
+   const effortLabel=document.createElement('label');
+   effortLabel.className='small';
+   effortLabel.style.marginTop='10px';
+   effortLabel.textContent='Esforço';
+   card.appendChild(effortLabel);
+
+   const effortGrid=document.createElement('div');
+   effortGrid.className='effort-grid';
+   renderChoiceButtons(effortGrid,efforts,st.effort,v=>st.effort=v);
+   card.appendChild(effortGrid);
+
+   const painLabel=document.createElement('label');
+   painLabel.className='small';
+   painLabel.style.marginTop='10px';
+   painLabel.textContent='Dor / desconforto';
+   card.appendChild(painLabel);
+
+   const painGrid=document.createElement('div');
+   painGrid.className='pain-grid';
+   renderChoiceButtons(painGrid,painOptions,st.pain,v=>st.pain=v);
+   card.appendChild(painGrid);
+
+   const noteLabel=document.createElement('label');
+   noteLabel.className='small';
+   noteLabel.style.marginTop='10px';
+   noteLabel.textContent='Observação';
+   card.appendChild(noteLabel);
+
+   const note=document.createElement('textarea');
+   note.placeholder='Observação deste exercício...';
+   note.value=st.note||'';
+   note.addEventListener('input',()=>{st.note=note.value;save();});
+   card.appendChild(note);
+
+   list.appendChild(card);
+ });
+
+ updateProgress();
 }
-function updateProgress(){
-  let el=document.getElementById('progressInfo');
-  if(!el){
-    el=document.createElement('div');
-    el.id='progressInfo';
-    el.className='status';
-    document.getElementById('timeInfo').after(el);
-  }
-  el.textContent=`${completedCount()} de ${workouts[current].ex.length} exercícios concluídos`;
-}
-function setReportState(){
-  $('#reportBtn').disabled=!ended;
-  $('#reportHint').textContent=ended?'Treino encerrado. Relatório liberado.':'Encerre o treino para liberar o relatório.';
-}
-function formatLoad(v,unit){
-  v=(v??'').trim();
-  if(!v) return 'não informado';
-  return unit ? `${v} ${unit}` : v;
-}
+
 function finishWorkout(){
-  ended=new Date();
-  clearInterval(ticker); ticker=null;
-  $('#stop').disabled=true;
-  showTimer();
-  $('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;
-  setReportState();
+ ended=new Date();
+ if(ticker){
+   clearInterval(ticker);
+   ticker=null;
+ }
+ $('#stop').disabled=true;
+ showTimer();
+ $('#timeInfo').textContent=
+   `Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;
+ setReportState();
+ save();
 }
 
 $$('.tab').forEach(b=>b.addEventListener('click',()=>{
-  if(started && !ended){ alert('Encerre o treino atual antes de trocar de ficha.'); return; }
-  current=b.dataset.key; started=null; ended=null;
-  $('#timer').textContent='00:00:00';
-  $('#start').disabled=false; $('#stop').disabled=true;
-  $('#timeInfo').textContent='Pronto para iniciar.';
-  $('#reportWrap').hidden=true; setReportState(); save(); render(); updateProgress();
+ if(started && !ended){
+   alert('Encerre o treino atual antes de trocar de ficha.');
+   return;
+ }
+ current=b.dataset.key;
+ started=null;
+ ended=null;
+ $('#timer').textContent='00:00:00';
+ $('#start').disabled=false;
+ $('#stop').disabled=true;
+ $('#timeInfo').textContent='Pronto para iniciar.';
+ $('#reportWrap').hidden=true;
+ setReportState();
+ save();
+ render();
 }));
 
 $('#start').addEventListener('click',()=>{
-  if(started && !ended)return;
-  started=new Date(); ended=null;
-  $('#start').disabled=true; $('#stop').disabled=false;
-  $('#timeInfo').textContent=`Início: ${hhmm(started)}`;
-  $('#reportWrap').hidden=true; setReportState();
-  showTimer(); ticker=setInterval(showTimer,1000);
+ if(started && !ended)return;
+ started=new Date();
+ ended=null;
+ $('#start').disabled=true;
+ $('#stop').disabled=false;
+ $('#timeInfo').textContent=`Início: ${hhmm(started)}`;
+ $('#reportWrap').hidden=true;
+ setReportState();
+ showTimer();
+ ticker=setInterval(showTimer,1000);
 });
 
 $('#stop').addEventListener('click',()=>{
-  if(!started||ended)return;
-  const pending=workouts[current].ex
-    .map((e,i)=>({name:e[0],done:!!states[current]?.[i]?.done}))
-    .filter(x=>!x.done);
+ if(!started || ended)return;
 
-  if(pending.length){
-    const nomes=pending.map(x=>`• ${x.name}`).join('\n');
-    const ok=confirm(`Os seguintes exercícios não foram marcados como Feito:\n\n${nomes}\n\nDeseja encerrar o treino mesmo assim?`);
-    if(!ok) return;
-  }
-  finishWorkout();
+ const pending=workouts[current].ex
+   .map((e,i)=>({index:i,name:e[0],done:!!states[current]?.[i]?.done}))
+   .filter(x=>!x.done);
+
+ if(pending.length){
+   const nomes=pending.map(x=>`• ${x.name}`).join('\\n');
+   const ok=confirm(
+     `Os seguintes exercícios não foram marcados como Feito:
+
+${nomes}
+
+`+
+     `Se você confirmar, eles serão registrados como NÃO REALIZADOS e o treino será encerrado.
+
+Deseja encerrar o treino?`
+   );
+   if(!ok)return;
+
+   pending.forEach(x=>{
+     if(!states[current][x.index])states[current][x.index]={};
+     states[current][x.index].done=false;
+     states[current][x.index].status='not_done';
+   });
+ }
+
+ finishWorkout();
+ render();
 });
 
 $('#generalNotes').addEventListener('input',save);
@@ -221,31 +414,46 @@ $('#generalNotes').addEventListener('input',save);
 $('#clearBtn').addEventListener('click',()=>{
  if(!confirm('Limpar apenas os registros do treino '+current+'?'))return;
  states[current]={};
- started=null; ended=null;
- if(ticker){clearInterval(ticker);ticker=null}
+ started=null;
+ ended=null;
+ if(ticker){
+   clearInterval(ticker);
+   ticker=null;
+ }
  $('#timer').textContent='00:00:00';
- $('#start').disabled=false; $('#stop').disabled=true;
+ $('#start').disabled=false;
+ $('#stop').disabled=true;
  $('#timeInfo').textContent='Pronto para iniciar.';
  $('#reportWrap').hidden=true;
- save(); render(); updateProgress(); setReportState();
+ save();
+ render();
+ setReportState();
 });
 
 $('#reportBtn').addEventListener('click',()=>{
- if(!ended){ alert('Encerre o treino antes de gerar o relatório.'); return; }
+ // Segunda barreira: mesmo que alguém tente acionar o botão por outro meio,
+ // nenhum relatório é gerado sem treino iniciado E encerrado.
+ if(!started || !ended){
+   alert('O relatório só pode ser gerado depois de iniciar e encerrar o treino.');
+   setReportState();
+   return;
+ }
 
  const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';
  const lines=[`*_${day} (Treino ${current})_*`,''];
+
  if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);
- if(started)lines.push(`Início treino ${hhmm(started)}`);
- lines.push('');
+ lines.push(`Início treino ${hhmm(started)}`,'');
 
  workouts[current].ex.forEach((e,i)=>{
    const st=states[current][i]||{};
    lines.push(`*${e[0]}*`);
+
    if(!st.done){
      lines.push('Status: Não realizado','');
      return;
    }
+
    lines.push(`Série: ${st.sets||e[1]}`);
    lines.push(`Carga: ${formatLoad((st.load??e[2]),e[3])}`);
    lines.push(`Esforço: ${st.effort||'não informado'}`);
@@ -254,40 +462,84 @@ $('#reportBtn').addEventListener('click',()=>{
    lines.push('');
  });
 
- lines.push(`Término: ${hhmm(ended)}`,`Duração: ${Math.round(elapsed()/60)}min`);
+ lines.push(
+   `Término: ${hhmm(ended)}`,
+   `Duração: ${Math.round(elapsed()/60)}min`
+ );
  if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);
+
  const gn=$('#generalNotes').value.trim();
  if(gn)lines.push(`Observação geral: ${gn}`);
 
- $('#reportText').textContent=lines.join('\n');
+ $('#reportText').textContent=lines.join('\\n');
  $('#reportWrap').hidden=false;
  $('#reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
 });
 
-updateProgress();
-setReportState();
-
 $('#copyBtn').addEventListener('click',async()=>{
  const txt=$('#reportText').textContent;
- try{await navigator.clipboard.writeText(txt);$('#copyStatus').textContent='Relatório copiado.'}
- catch(e){$('#copyStatus').textContent='Selecione o texto do relatório e copie manualmente.'}
+ try{
+   await navigator.clipboard.writeText(txt);
+   $('#copyStatus').textContent='Relatório copiado.';
+ }catch(e){
+   $('#copyStatus').textContent='Selecione o texto do relatório e copie manualmente.';
+ }
 });
 
-$('#pdfInput').addEventListener('change', async ev=>{
- const f=ev.target.files?.[0]; if(!f)return; $('#pdfStatus').textContent='Lendo PDF…';
+$('#pdfInput').addEventListener('change',async ev=>{
+ const f=ev.target.files?.[0];
+ if(!f)return;
+ $('#pdfStatus').textContent='Lendo PDF…';
+
  try{
    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');
    const data=new Uint8Array(await f.arrayBuffer());
    const pdf=await pdfjs.getDocument({data,disableWorker:true}).promise;
    let text='';
-   for(let p=1;p<=Math.min(pdf.numPages,10);p++){const page=await pdf.getPage(p);const c=await page.getTextContent();text+=' '+c.items.map(x=>x.str).join(' ')}
+
+   for(let p=1;p<=Math.min(pdf.numPages,10);p++){
+     const page=await pdf.getPage(p);
+     const c=await page.getTextContent();
+     text+=' '+c.items.map(x=>x.str).join(' ');
+   }
+
    const all=Object.values(workouts).flatMap(w=>w.ex.map(e=>e[0]));
    const found=all.filter(n=>text.toLowerCase().includes(n.toLowerCase()));
-   $('#pdfStatus').textContent=found.length?`PDF reconhecido: ${found.length} exercícios conhecidos encontrados. Nesta beta, a ficha atual foi preservada para evitar substituição incorreta.`:'PDF lido, mas não reconheci exercícios do padrão atual.';
- }catch(e){$('#pdfStatus').textContent='Não consegui interpretar este PDF automaticamente. A ficha atual foi mantida.'}
+   $('#pdfStatus').textContent=found.length
+     ? `PDF reconhecido: ${found.length} exercícios conhecidos encontrados. Nesta beta, a ficha atual foi preservada para evitar substituição incorreta.`
+     : 'PDF lido, mas não reconheci exercícios do padrão atual.';
+ }catch(e){
+   $('#pdfStatus').textContent='Não consegui interpretar este PDF automaticamente. A ficha atual foi mantida.';
+ }
 });
 
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+// Restaura preferências salvas, mas não considera um treino antigo como encerrado.
+// Isso evita liberar relatório após recarregar a página sem encerrar a sessão atual.
+if(meta.current && workouts[meta.current])current=meta.current;
+disposition=Number(meta.disposition)||null;
+overallRpe=Number(meta.overallRpe)||null;
+$('#generalNotes').value=meta.notes||'';
+
+scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);
+scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);
+render();
+setReportState();
+showTimer();
+
+// Evita que uma versão antiga fique presa no celular por Service Worker/cache.
+// A aplicação continua funcionando normalmente pela Vercel.
+if('serviceWorker' in navigator){
+ window.addEventListener('load',async()=>{
+   try{
+     const regs=await navigator.serviceWorker.getRegistrations();
+     await Promise.all(regs.map(r=>r.unregister()));
+     if('caches' in window){
+       const keys=await caches.keys();
+       await Promise.all(keys.map(k=>caches.delete(k)));
+     }
+   }catch(e){}
+ });
+}
 </script>
 </body>
 </html>
