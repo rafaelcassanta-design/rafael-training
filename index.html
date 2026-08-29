@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Treino">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Rafael Training Beta 1.2</title>
+  <title>Rafael Training Beta 1.3</title>
   <style>
     :root{
       --bg:#f5f7fa; --card:#ffffff; --text:#17212b; --muted:#66717d;
@@ -31,7 +31,7 @@
     button{min-height:46px;border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 10px;font-weight:700;color:var(--text);touch-action:manipulation}
     button.active{background:var(--primary-soft);outline:2px solid var(--primary)}
     button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-    button:disabled{opacity:.45}
+    button:disabled{opacity:.45;cursor:not-allowed}
     .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
     .card-title{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
     .planned{font-size:13px;color:var(--muted);margin-top:2px}
@@ -55,8 +55,15 @@
 <body>
 <div class="app">
   <div class="top">
-    <div><div><div class="eyebrow">Ficha atual</div><h1 id="title">Treino A — Segunda</h1><div class="mini">Beta 1.2 — relatório protegido</div></div>
-    <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
+    <div>
+      <div class="eyebrow">Ficha atual</div>
+      <h1 id="title">Treino A — Segunda</h1>
+      <div class="mini">Beta 1.3 — relatório protegido</div>
+    </div>
+    <div class="timer">
+      <div class="eyebrow">Tempo</div>
+      <strong id="timer">00:00:00</strong>
+    </div>
   </div>
 
   <div class="tabs">
@@ -70,6 +77,7 @@
     <button id="stop" disabled>■ ENCERRAR</button>
   </div>
   <div id="timeInfo" class="status">Pronto para iniciar.</div>
+  <div id="progressInfo" class="status"></div>
 
   <div class="section-title">Disposição ao começar <span class="mini"><strong id="dispOut">—</strong>/10</span></div>
   <div id="dispGrid" class="score-grid"></div>
@@ -95,7 +103,8 @@
   </div>
 
   <div class="footer-actions">
-    <button id="reportBtn" class="primary" style="width:100%" disabled>GERAR RELATÓRIO</button><div id="reportHint" class="status">Encerre o treino para liberar o relatório.</div>
+    <button id="reportBtn" class="primary" style="width:100%" disabled>GERAR RELATÓRIO</button>
+    <div id="reportHint" class="status">Encerre o treino para liberar o relatório.</div>
     <button id="clearBtn" style="width:100%;margin-top:8px">Limpar treino atual</button>
   </div>
 
@@ -108,6 +117,8 @@
 </div>
 
 <script>
+'use strict';
+
 const workouts={
  A:{title:'Treino A — Segunda',ex:[
  ['Leg press','2x12','45','kg'],['Supino reto com halteres','3x12','6','kg cada'],
@@ -139,8 +150,18 @@ let ticker=null;
 let disposition=null;
 let overallRpe=null;
 
-const states=JSON.parse(localStorage.getItem('rt_states')||'{"A":{},"B":{},"C":{}}');
-const meta=JSON.parse(localStorage.getItem('rt_meta')||'{}');
+function readStoredJson(key,fallback){
+ try{
+   const raw=localStorage.getItem(key);
+   return raw ? JSON.parse(raw) : fallback;
+ }catch(e){
+   return fallback;
+ }
+}
+
+const states=readStoredJson('rt_states',{A:{},B:{},C:{}});
+['A','B','C'].forEach(k=>{if(!states[k] || typeof states[k]!=='object')states[k]={};});
+const meta=readStoredJson('rt_meta',{});
 
 const $=s=>document.querySelector(s);
 const $$=s=>[...document.querySelectorAll(s)];
@@ -160,8 +181,13 @@ function elapsed(){
 
 function showTimer(){
  const s=elapsed();
- $('#timer').textContent=
-   `${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
+ $('#timer').textContent=`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
+}
+
+function formatLoad(v,unit){
+ const value=String(v??'').trim();
+ if(!value)return 'não informado';
+ return unit ? `${value} ${unit}` : value;
 }
 
 function scoreGrid(id,out,setter,initial){
@@ -169,8 +195,8 @@ function scoreGrid(id,out,setter,initial){
  box.innerHTML='';
  for(let i=1;i<=10;i++){
    const b=document.createElement('button');
-   b.textContent=i;
    b.type='button';
+   b.textContent=i;
    if(initial===i)b.classList.add('active');
    b.addEventListener('click',()=>{
      [...box.children].forEach(x=>x.classList.remove('active'));
@@ -184,52 +210,39 @@ function scoreGrid(id,out,setter,initial){
  $(out).textContent=initial||'—';
 }
 
-function completedCount(){
- return workouts[current].ex.reduce(
-   (n,_,i)=>n+(states[current]?.[i]?.done?1:0),0
- );
-}
-
-function updateProgress(){
- let el=document.getElementById('progressInfo');
- if(!el){
-   el=document.createElement('div');
-   el.id='progressInfo';
-   el.className='status';
-   document.getElementById('timeInfo').after(el);
- }
- el.textContent=`${completedCount()} de ${workouts[current].ex.length} exercícios concluídos`;
-}
-
-function setReportState(){
- const liberado=Boolean(started && ended);
- $('#reportBtn').disabled=!liberado;
- $('#reportHint').textContent=liberado
-   ? 'Treino encerrado. Relatório liberado.'
-   : 'Encerre o treino para liberar o relatório.';
-}
-
-function formatLoad(v,unit){
- v=String(v??'').trim();
- if(!v) return 'não informado';
- return unit ? `${v} ${unit}` : v;
-}
-
-function renderChoiceButtons(container,options,value,onChange){
- container.innerHTML='';
+function makeChoiceGrid(className,options,currentValue,onChange){
+ const grid=document.createElement('div');
+ grid.className=className;
  options.forEach(opt=>{
    const b=document.createElement('button');
    b.type='button';
    b.textContent=opt;
-   if(value===opt)b.classList.add('active');
+   if(currentValue===opt)b.classList.add('active');
    b.addEventListener('click',()=>{
-     [...container.children].forEach(x=>x.classList.remove('active'));
+     [...grid.children].forEach(x=>x.classList.remove('active'));
      b.classList.add('active');
      onChange(opt);
      save();
    });
-   container.appendChild(b);
+   grid.appendChild(b);
  });
+ return grid;
+}
+
+function completedCount(){
+ return workouts[current].ex.reduce((n,_,i)=>n+(states[current]?.[i]?.done?1:0),0);
+}
+
+function updateProgress(){
+ $('#progressInfo').textContent=`${completedCount()} de ${workouts[current].ex.length} exercícios concluídos`;
+}
+
+function setReportState(){
+ const allowed=Boolean(started && ended);
+ $('#reportBtn').disabled=!allowed;
+ $('#reportHint').textContent=allowed
+   ? 'Treino encerrado. Relatório liberado.'
+   : 'Encerre o treino para liberar o relatório.';
 }
 
 function render(){
@@ -240,7 +253,7 @@ function render(){
  list.innerHTML='';
 
  workouts[current].ex.forEach((e,i)=>{
-   if(!states[current][i]) states[current][i]={};
+   if(!states[current][i] || typeof states[current][i]!=='object')states[current][i]={};
    const st=states[current][i];
 
    const card=document.createElement('div');
@@ -249,82 +262,77 @@ function render(){
    const head=document.createElement('div');
    head.className='card-title';
 
-   const titleBox=document.createElement('div');
-   titleBox.innerHTML=`<strong>${e[0]}</strong><div class="planned">Planejado: ${e[1]} • ${formatLoad(e[2],e[3])}</div>`;
+   const info=document.createElement('div');
+   const name=document.createElement('strong');
+   name.textContent=e[0];
+   const planned=document.createElement('div');
+   planned.className='planned';
+   planned.textContent=`Planejado: ${e[1]} • ${formatLoad(e[2],e[3])}`;
+   info.append(name,planned);
 
    const doneLabel=document.createElement('label');
    doneLabel.className='check';
    const done=document.createElement('input');
    done.type='checkbox';
-   done.checked=!!st.done;
-   doneLabel.append(done,document.createTextNode('Feito'));
-
+   done.checked=Boolean(st.done);
    done.addEventListener('change',()=>{
      st.done=done.checked;
-     if(st.done) delete st.status;
+     if(st.done)delete st.status;
      updateProgress();
      save();
    });
-
-   head.append(titleBox,doneLabel);
+   doneLabel.append(done,document.createTextNode('Feito'));
+   head.append(info,doneLabel);
    card.appendChild(head);
 
    const row=document.createElement('div');
    row.className='row';
    row.style.marginTop='10px';
 
-   const setsWrap=document.createElement('div');
-   setsWrap.innerHTML='<label class="small">Séries / repetições</label>';
+   const setsBox=document.createElement('div');
+   const setsLabel=document.createElement('label');
+   setsLabel.className='small';
+   setsLabel.textContent='Séries/reps';
    const sets=document.createElement('input');
    sets.type='text';
    sets.value=st.sets??e[1];
    sets.addEventListener('input',()=>{st.sets=sets.value;save();});
-   setsWrap.appendChild(sets);
+   setsBox.append(setsLabel,sets);
 
-   const loadWrap=document.createElement('div');
-   loadWrap.innerHTML='<label class="small">Carga</label>';
+   const loadBox=document.createElement('div');
+   const loadLabel=document.createElement('label');
+   loadLabel.className='small';
+   loadLabel.textContent='Carga';
    const load=document.createElement('input');
    load.type='text';
    load.value=st.load??e[2];
    load.addEventListener('input',()=>{st.load=load.value;save();});
-   loadWrap.appendChild(load);
+   loadBox.append(loadLabel,load);
 
-   row.append(setsWrap,loadWrap);
+   row.append(setsBox,loadBox);
    card.appendChild(row);
 
    const effortLabel=document.createElement('label');
    effortLabel.className='small';
    effortLabel.style.marginTop='10px';
    effortLabel.textContent='Esforço';
-   card.appendChild(effortLabel);
-
-   const effortGrid=document.createElement('div');
-   effortGrid.className='effort-grid';
-   renderChoiceButtons(effortGrid,efforts,st.effort,v=>st.effort=v);
-   card.appendChild(effortGrid);
+   card.append(effortLabel,makeChoiceGrid('effort-grid',efforts,st.effort,v=>st.effort=v));
 
    const painLabel=document.createElement('label');
    painLabel.className='small';
    painLabel.style.marginTop='10px';
-   painLabel.textContent='Dor / desconforto';
-   card.appendChild(painLabel);
-
-   const painGrid=document.createElement('div');
-   painGrid.className='pain-grid';
-   renderChoiceButtons(painGrid,painOptions,st.pain,v=>st.pain=v);
-   card.appendChild(painGrid);
+   painLabel.textContent='Dor/desconforto';
+   card.append(painLabel,makeChoiceGrid('pain-grid',painOptions,st.pain,v=>st.pain=v));
 
    const noteLabel=document.createElement('label');
    noteLabel.className='small';
    noteLabel.style.marginTop='10px';
    noteLabel.textContent='Observação';
-   card.appendChild(noteLabel);
-
    const note=document.createElement('textarea');
    note.placeholder='Observação deste exercício...';
    note.value=st.note||'';
    note.addEventListener('input',()=>{st.note=note.value;save();});
-   card.appendChild(note);
+   card.append(noteLabel,note);
 
    list.appendChild(card);
  });
@@ -334,14 +342,10 @@ function render(){
 
 function finishWorkout(){
  ended=new Date();
- if(ticker){
-   clearInterval(ticker);
-   ticker=null;
- }
+ if(ticker){clearInterval(ticker);ticker=null;}
  $('#stop').disabled=true;
  showTimer();
- $('#timeInfo').textContent=
-   `Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;
+ $('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;
  setReportState();
  save();
 }
@@ -360,8 +364,8 @@ $$('.tab').forEach(b=>b.addEventListener('click',()=>{
  $('#timeInfo').textContent='Pronto para iniciar.';
  $('#reportWrap').hidden=true;
  setReportState();
- save();
  render();
+ save();
 }));
 
 $('#start').addEventListener('click',()=>{
@@ -381,20 +385,14 @@ $('#stop').addEventListener('click',()=>{
  if(!started || ended)return;
 
  const pending=workouts[current].ex
-   .map((e,i)=>({index:i,name:e[0],done:!!states[current]?.[i]?.done}))
+   .map((e,i)=>({index:i,name:e[0],done:Boolean(states[current]?.[i]?.done)}))
    .filter(x=>!x.done);
 
  if(pending.length){
-   const nomes=pending.map(x=>`• ${x.name}`).join('\\n');
+   const nomes=pending.map(x=>`• ${x.name}`).join('\n');
    const ok=confirm(
-     `Os seguintes exercícios não foram marcados como Feito:
-
-${nomes}
-
-`+
-     `Se você confirmar, eles serão registrados como NÃO REALIZADOS e o treino será encerrado.
-
-Deseja encerrar o treino?`
+     `Os seguintes exercícios não foram marcados como Feito:\n\n${nomes}\n\n`+
+     `Se você confirmar, eles serão registrados como NÃO REALIZADOS.\n\nDeseja encerrar o treino?`
    );
    if(!ok)return;
 
@@ -416,23 +414,18 @@ $('#clearBtn').addEventListener('click',()=>{
  states[current]={};
  started=null;
  ended=null;
- if(ticker){
-   clearInterval(ticker);
-   ticker=null;
- }
+ if(ticker){clearInterval(ticker);ticker=null;}
  $('#timer').textContent='00:00:00';
  $('#start').disabled=false;
  $('#stop').disabled=true;
  $('#timeInfo').textContent='Pronto para iniciar.';
  $('#reportWrap').hidden=true;
- save();
  render();
  setReportState();
+ save();
 });
 
 $('#reportBtn').addEventListener('click',()=>{
- // Segunda barreira: mesmo que alguém tente acionar o botão por outro meio,
- // nenhum relatório é gerado sem treino iniciado E encerrado.
  if(!started || !ended){
    alert('O relatório só pode ser gerado depois de iniciar e encerrar o treino.');
    setReportState();
@@ -441,37 +434,30 @@ $('#reportBtn').addEventListener('click',()=>{
 
  const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';
  const lines=[`*_${day} (Treino ${current})_*`,''];
-
  if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);
  lines.push(`Início treino ${hhmm(started)}`,'');
 
  workouts[current].ex.forEach((e,i)=>{
    const st=states[current][i]||{};
    lines.push(`*${e[0]}*`);
-
    if(!st.done){
      lines.push('Status: Não realizado','');
      return;
    }
-
    lines.push(`Série: ${st.sets||e[1]}`);
-   lines.push(`Carga: ${formatLoad((st.load??e[2]),e[3])}`);
+   lines.push(`Carga: ${formatLoad(st.load??e[2],e[3])}`);
    lines.push(`Esforço: ${st.effort||'não informado'}`);
    lines.push(`Dor/desconforto: ${st.pain||'não informado'}`);
    if(st.note)lines.push(`Observação: ${st.note}`);
    lines.push('');
  });
 
- lines.push(
-   `Término: ${hhmm(ended)}`,
-   `Duração: ${Math.round(elapsed()/60)}min`
- );
+ lines.push(`Término: ${hhmm(ended)}`,`Duração: ${Math.round(elapsed()/60)}min`);
  if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);
-
  const gn=$('#generalNotes').value.trim();
  if(gn)lines.push(`Observação geral: ${gn}`);
 
- $('#reportText').textContent=lines.join('\\n');
+ $('#reportText').textContent=lines.join('\n');
  $('#reportWrap').hidden=false;
  $('#reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
 });
@@ -490,19 +476,16 @@ $('#pdfInput').addEventListener('change',async ev=>{
  const f=ev.target.files?.[0];
  if(!f)return;
  $('#pdfStatus').textContent='Lendo PDF…';
-
  try{
    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');
    const data=new Uint8Array(await f.arrayBuffer());
    const pdf=await pdfjs.getDocument({data,disableWorker:true}).promise;
    let text='';
-
    for(let p=1;p<=Math.min(pdf.numPages,10);p++){
      const page=await pdf.getPage(p);
      const c=await page.getTextContent();
      text+=' '+c.items.map(x=>x.str).join(' ');
    }
-
    const all=Object.values(workouts).flatMap(w=>w.ex.map(e=>e[0]));
    const found=all.filter(n=>text.toLowerCase().includes(n.toLowerCase()));
    $('#pdfStatus').textContent=found.length
@@ -513,12 +496,10 @@ $('#pdfInput').addEventListener('change',async ev=>{
  }
 });
 
-// Restaura preferências salvas, mas não considera um treino antigo como encerrado.
-// Isso evita liberar relatório após recarregar a página sem encerrar a sessão atual.
 if(meta.current && workouts[meta.current])current=meta.current;
 disposition=Number(meta.disposition)||null;
 overallRpe=Number(meta.overallRpe)||null;
-$('#generalNotes').value=meta.notes||'';
+$('#generalNotes').value=typeof meta.notes==='string'?meta.notes:'';
 
 scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);
 scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);
@@ -526,8 +507,8 @@ render();
 setReportState();
 showTimer();
 
-// Evita que uma versão antiga fique presa no celular por Service Worker/cache.
-// A aplicação continua funcionando normalmente pela Vercel.
+// Depois de esta versão carregar uma vez, remove o cache/PWA antigo para evitar
+// que o celular volte a exibir uma versão anterior do index.html.
 if('serviceWorker' in navigator){
  window.addEventListener('load',async()=>{
    try{
