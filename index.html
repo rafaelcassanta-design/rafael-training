@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Treino">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Rafael Training Beta 1.4</title>
+  <title>Rafael Training Beta 1.5</title>
   <style>
     :root{
       --bg:#f5f7fa; --card:#ffffff; --text:#17212b; --muted:#66717d;
@@ -58,7 +58,7 @@
     <div>
       <div class="eyebrow">Ficha atual</div>
       <h1 id="title">Treino A — Segunda</h1>
-      <div class="mini">Beta 1.4 — data e horários automáticos</div>
+      <div class="mini">Beta 1.5 — data e horários automáticos</div>
     </div>
     <div class="timer">
       <div class="eyebrow">Tempo</div>
@@ -439,7 +439,7 @@ $('#reportBtn').addEventListener('click',()=>{
  lines.push(`Início: ${hhmm(started)}`);
  lines.push(`Término: ${hhmm(ended)}`);
  lines.push(`Duração: ${Math.round(elapsed()/60)} min`);
- if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);
+ lines.push(`Disposição antes do treino: ${disposition ? disposition+'/10' : 'Não informado'}`);
  lines.push('');
 
  workouts[current].ex.forEach((e,i)=>{
@@ -457,7 +457,7 @@ $('#reportBtn').addEventListener('click',()=>{
    lines.push('');
  });
 
- if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);
+ lines.push(`Esforço geral: ${overallRpe ? overallRpe+'/10' : 'Não informado'}`);
  const gn=$('#generalNotes').value.trim();
  if(gn)lines.push(`Observação geral: ${gn}`);
 
@@ -501,8 +501,8 @@ $('#pdfInput').addEventListener('change',async ev=>{
 });
 
 if(meta.current && workouts[meta.current])current=meta.current;
-disposition=Number(meta.disposition)||null;
-overallRpe=Number(meta.overallRpe)||null;
+disposition=null;
+overallRpe=null;
 $('#generalNotes').value=typeof meta.notes==='string'?meta.notes:'';
 
 scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);
