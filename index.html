@@ -1,530 +1,131 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#17365D">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Treino">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <title>Rafael Training Beta 1.5</title>
-  <style>
-    :root{
-      --bg:#f5f7fa; --card:#ffffff; --text:#17212b; --muted:#66717d;
-      --border:#d8dee5; --primary:#17365D; --primary-soft:#d9eaf7;
-      --ok:#e7f6ec; --warn:#fff2d9; --danger:#fde8e8;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-    .app{max-width:760px;margin:0 auto;padding:14px 12px 90px}
-    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
-    .eyebrow{font-size:12px;color:var(--muted)}
-    h1{font-size:20px;margin:2px 0 0}
-    .timer{text-align:right}
-    .timer strong{font-size:25px;font-variant-numeric:tabular-nums}
-    .tabs,.row,.score-grid,.effort-grid,.pain-grid{display:grid;gap:8px}
-    .tabs{grid-template-columns:repeat(3,1fr);margin:10px 0}
-    .row{grid-template-columns:1fr 1fr}
-    button,input,textarea{font:inherit}
-    button{min-height:46px;border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 10px;font-weight:700;color:var(--text);touch-action:manipulation}
-    button.active{background:var(--primary-soft);outline:2px solid var(--primary)}
-    button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-    button:disabled{opacity:.45;cursor:not-allowed}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
-    .card-title{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
-    .planned{font-size:13px;color:var(--muted);margin-top:2px}
-    label.small{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
-    input[type=text],input[type=number],textarea{width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:#fff;font-size:16px}
-    textarea{resize:vertical;min-height:54px}
-    .score-grid{grid-template-columns:repeat(5,1fr)}
-    .effort-grid{grid-template-columns:repeat(2,1fr)}
-    .pain-grid{grid-template-columns:repeat(2,1fr)}
-    .section-title{font-weight:800;margin:16px 0 8px}
-    .mini{font-size:12px;color:var(--muted)}
-    .check{display:flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap}
-    .check input{width:20px;height:20px}
-    .status{font-size:13px;color:var(--muted);margin-top:7px}
-    .footer-actions{position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 74%,transparent);padding:18px 0 4px;margin-top:14px}
-    .report{white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:13px;line-height:1.45}
-    details summary{font-weight:800;cursor:pointer}
-    @media(min-width:600px){.score-grid{grid-template-columns:repeat(10,1fr)}.effort-grid{grid-template-columns:repeat(5,1fr)}}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17365D">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Rafael Training Beta 1.2</title>
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.app{max-width:760px;margin:auto;padding:14px 12px 90px}.top{display:flex;justify-content:space-between;gap:12px}.eyebrow,.mini,.status{font-size:12px;color:var(--muted)}
+h1{font-size:20px;margin:2px 0}.timer{text-align:right}.timer strong{font-size:25px;font-variant-numeric:tabular-nums}
+.tabs,.row,.score-grid,.effort-grid,.pain-grid{display:grid;gap:8px}.tabs{grid-template-columns:repeat(3,1fr);margin:10px 0}.row{grid-template-columns:1fr 1fr}
+button,input,textarea{font:inherit}button{min-height:46px;border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 10px;font-weight:700;color:var(--text)}
+button.active{background:var(--soft);outline:2px solid var(--primary)}button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}button:disabled{opacity:.42}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}.section-title{font-weight:800;margin:16px 0 8px}
+.score-grid{grid-template-columns:repeat(5,1fr)}.effort-grid,.pain-grid{grid-template-columns:repeat(2,1fr)}
+.card-title{display:flex;justify-content:space-between;gap:8px}.planned{font-size:13px;color:var(--muted);margin-top:2px}.check{display:flex;align-items:center;gap:6px;font-size:13px}.check input{width:20px;height:20px}
+label.small{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}input[type=text],textarea{width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:9px 10px;background:#fff;font-size:16px}
+textarea{resize:vertical;min-height:54px}.status{margin-top:7px}.progress{font-size:13px;font-weight:700;color:var(--primary);margin-top:7px}
+.import-actions{display:grid;gap:8px;margin-top:10px}.preview{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.45}
+.footer-actions{position:sticky;bottom:0;background:linear-gradient(to top,var(--bg) 74%,transparent);padding:18px 0 4px;margin-top:14px}
+.report{white-space:pre-wrap;background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;font-size:13px;line-height:1.45}
+@media(min-width:600px){.score-grid{grid-template-columns:repeat(10,1fr)}.effort-grid{grid-template-columns:repeat(5,1fr)}}
+</style>
 </head>
 <body>
 <div class="app">
-  <div class="top">
-    <div>
-      <div class="eyebrow">Ficha atual</div>
-      <h1 id="title">Treino A — Segunda</h1>
-      <div class="mini">Beta 1.5 — data e horários automáticos</div>
-    </div>
-    <div class="timer">
-      <div class="eyebrow">Tempo</div>
-      <strong id="timer">00:00:00</strong>
-    </div>
+<div class="top">
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.2</div></div>
+  <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
+</div>
+<div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
+<div class="row"><button id="start" class="primary">▶ INICIAR</button><button id="stop" disabled>■ ENCERRAR</button></div>
+<div id="timeInfo" class="status">Pronto para iniciar.</div><div id="progressInfo" class="progress"></div>
+
+<div class="section-title">Disposição ao começar <span class="mini"><strong id="dispOut">—</strong>/10</span></div>
+<div id="dispGrid" class="score-grid"></div>
+
+<div class="card">
+  <div style="font-weight:800">📄 Importar ficha PDF</div>
+  <p class="mini">Use um PDF compatível gerado no padrão Rafael Training. A ficha só será alterada depois de você confirmar.</p>
+  <input id="pdfInput" type="file" accept="application/pdf">
+  <div class="import-actions">
+    <button id="importBtn" type="button" disabled>IMPORTAR FICHA</button>
   </div>
-
-  <div class="tabs">
-    <button class="tab active" data-key="A">A</button>
-    <button class="tab" data-key="B">B</button>
-    <button class="tab" data-key="C">C</button>
-  </div>
-
-  <div class="row">
-    <button id="start" class="primary">▶ INICIAR</button>
-    <button id="stop" disabled>■ ENCERRAR</button>
-  </div>
-  <div id="timeInfo" class="status">Pronto para iniciar.</div>
-  <div id="progressInfo" class="status"></div>
-
-  <div class="section-title">Disposição ao começar <span class="mini"><strong id="dispOut">—</strong>/10</span></div>
-  <div id="dispGrid" class="score-grid"></div>
-
-  <div class="card">
-    <details>
-      <summary>📄 Importar ficha PDF — beta</summary>
-      <p class="mini">Selecione um PDF criado no nosso padrão. A beta procura exercícios conhecidos no texto do PDF. O treino atual só é substituído após confirmação.</p>
-      <input id="pdfInput" type="file" accept="application/pdf">
-      <div id="pdfStatus" class="status"></div>
-    </details>
-  </div>
-
-  <div class="section-title">Exercícios <span class="mini">toque e confirme</span></div>
-  <div id="exerciseList"></div>
-
-  <div class="section-title">Esforço geral <span class="mini"><strong id="rpeOut">—</strong>/10</span></div>
-  <div id="rpeGrid" class="score-grid"></div>
-
-  <div class="card">
-    <label class="small">Observação geral</label>
-    <textarea id="generalNotes" placeholder="Ex.: acordei cansado, mas treinei bem..."></textarea>
-  </div>
-
-  <div class="footer-actions">
-    <button id="reportBtn" class="primary" style="width:100%" disabled>GERAR RELATÓRIO</button>
-    <div id="reportHint" class="status">Encerre o treino para liberar o relatório.</div>
-    <button id="clearBtn" style="width:100%;margin-top:8px">Limpar treino atual</button>
-  </div>
-
-  <div id="reportWrap" class="card" hidden>
-    <div class="section-title" style="margin-top:0">Relatório pronto</div>
-    <div id="reportText" class="report"></div>
-    <button id="copyBtn" style="width:100%;margin-top:10px">Copiar relatório</button>
-    <div id="copyStatus" class="status"></div>
-  </div>
+  <div id="pdfStatus" class="status"></div>
+  <div id="preview" class="preview" hidden></div>
+  <button id="confirmImportBtn" class="primary" style="width:100%;margin-top:10px" hidden>CONFIRMAR NOVA FICHA</button>
 </div>
 
+<div class="section-title">Exercícios e atividades <span class="mini">toque e confirme</span></div>
+<div id="exerciseList"></div>
+
+<div class="section-title">Esforço geral <span class="mini"><strong id="rpeOut">—</strong>/10</span></div>
+<div id="rpeGrid" class="score-grid"></div>
+<div class="card"><label class="small">Observação geral</label><textarea id="generalNotes" placeholder="Observação geral do treino"></textarea></div>
+
+<div class="footer-actions">
+<button id="reportBtn" class="primary" style="width:100%" disabled>GERAR RELATÓRIO</button>
+<div id="reportHint" class="status">Encerre o treino para liberar o relatório.</div>
+<button id="clearBtn" style="width:100%;margin-top:8px">Limpar treino atual</button>
+</div>
+<div id="reportWrap" class="card" hidden><div style="font-weight:800;margin-bottom:8px">Relatório pronto</div><div id="reportText" class="report"></div><button id="copyBtn" style="width:100%;margin-top:10px">Copiar relatório</button><div id="copyStatus" class="status"></div></div>
+</div>
 <script>
-'use strict';
-
-const workouts={
- A:{title:'Treino A — Segunda',ex:[
- ['Leg press','2x12','45','kg'],['Supino reto com halteres','3x12','6','kg cada'],
- ['Mesa flexora','2x12','2','t'],['Bíceps na polia','2x12','3','t'],
- ['Puxada frontal','3x12','4','t'],['Desenvolvimento','2x12','5','kg cada'],
- ['Remada baixa','2x12','3','t'],['Panturrilha sentada','2x15','10','kg'],
- ['Tríceps corda','2x12','4','t'],['Flexão de punho / antebraço','2x15','leve','']]},
- B:{title:'Treino B — Quarta',ex:[
- ['Leg press','4x10','45','kg'],['Supino inclinado halteres','3x12','7','kg cada'],
- ['Mesa flexora','3x12','2','t'],['Tríceps na polia','3x12','3','t'],
- ['Cadeira abdutora','3x15','6','t'],['Rosca alternada','3x12','6','kg cada'],
- ['Puxada frontal','3x12','4','t'],['Elevação lateral','3x12','3','kg cada'],
- ['Remada com peito apoiado','3x12','5','kg/lado'],['Dead bug','2x8/lado','peso do corpo',''],
- ['Prancha lateral','2x30s/lado','peso do corpo','']]},
- C:{title:'Treino C — Sexta',ex:[
- ['Cadeira extensora','2x12','2','t'],['Supino reto com halteres','2x12','6','kg cada'],
- ['Pallof press','2x12/lado','2','t'],['Cadeira abdutora','2x15','6','t'],
- ['Face pull','2x12','2','t'],['Remada com peito apoiado','2x12','5','kg/lado'],
- ['Rosca martelo','2x12','6','kg cada'],['Tríceps corda','2x12','4','t']]}
-};
-
+const DEFAULT_PLAN={"schema": "rafael-training-plan-v1", "version": "2026-08-29", "workouts": {"A": {"title": "Treino A — Segunda", "items": [{"name": "Leg press", "sets": "2x12", "load": "45", "unit": "kg", "note": "Execução controlada; 2 s de isometria."}, {"name": "Supino reto com halteres", "sets": "3x12", "load": "6", "unit": "kg cada", "note": "Manter 3 séries."}, {"name": "Mesa flexora", "sets": "2x12", "load": "2", "unit": "t", "note": "Execução controlada."}, {"name": "Bíceps na polia", "sets": "2x12", "load": "3", "unit": "t", "note": "Execução controlada."}, {"name": "Puxada frontal", "sets": "3x12", "load": "4", "unit": "t", "note": "Retestar 4 t; sem buscar falha."}, {"name": "Desenvolvimento", "sets": "2x12", "load": "5", "unit": "kg cada", "note": "Execução controlada."}, {"name": "Remada baixa", "sets": "2x12", "load": "3", "unit": "t", "note": "Manter por mais um treino."}, {"name": "Panturrilha sentada", "sets": "2x15", "load": "10", "unit": "kg", "note": "Execução controlada."}, {"name": "Tríceps corda", "sets": "2x12", "load": "4", "unit": "t", "note": "Usar 4 t."}, {"name": "Flexão de punho / antebraço", "sets": "2x15", "load": "leve", "unit": "", "note": "Uma variação; movimento controlado."}, {"name": "Alongamento", "sets": "30 min", "load": "-", "unit": "", "note": "Após a musculação.", "kind": "activity"}, {"name": "Pilates", "sets": "30 min", "load": "-", "unit": "", "note": "Após o alongamento.", "kind": "activity"}]}, "B": {"title": "Treino B — Quarta", "items": [{"name": "Leg press", "sets": "4x10", "load": "45", "unit": "kg", "note": "Consolidar a carga."}, {"name": "Supino inclinado com halteres", "sets": "3x12", "load": "7", "unit": "kg cada", "note": "Consolidar."}, {"name": "Mesa flexora", "sets": "3x12", "load": "2", "unit": "t", "note": "Consolidar."}, {"name": "Tríceps na polia", "sets": "3x12", "load": "3", "unit": "t", "note": "Consolidar."}, {"name": "Cadeira abdutora", "sets": "3x15", "load": "6", "unit": "t", "note": "Manter 6 t; interromper se houver desconforto lombar."}, {"name": "Rosca alternada", "sets": "3x12", "load": "6", "unit": "kg cada", "note": "Consolidar."}, {"name": "Puxada frontal", "sets": "3x12", "load": "4", "unit": "t", "note": "Consolidar."}, {"name": "Elevação lateral", "sets": "3x12", "load": "3", "unit": "kg cada", "note": "Execução controlada."}, {"name": "Remada com peito apoiado", "sets": "3x12", "load": "5", "unit": "kg cada lado", "note": "Consolidar."}, {"name": "Dead bug", "sets": "2x8/lado", "load": "peso do corpo", "unit": "", "note": "Priorizar coordenação e controle."}, {"name": "Prancha lateral", "sets": "2x30 s/lado", "load": "peso do corpo", "unit": "", "note": "Manter técnica."}]}, "C": {"title": "Treino C — Sexta", "items": [{"name": "Cadeira extensora", "sets": "2x12", "load": "2", "unit": "t", "note": "Execução controlada."}, {"name": "Supino reto com halteres", "sets": "2x12", "load": "6", "unit": "kg cada", "note": "Treino curto."}, {"name": "Pallof press", "sets": "2x12/lado", "load": "2", "unit": "t", "note": "Controle do tronco."}, {"name": "Cadeira abdutora", "sets": "2x15", "load": "6", "unit": "t", "note": "Interromper se houver desconforto lombar."}, {"name": "Face pull", "sets": "2x12", "load": "2", "unit": "t", "note": "Execução controlada."}, {"name": "Remada com peito apoiado", "sets": "2x12", "load": "5", "unit": "kg cada lado", "note": "Execução controlada."}, {"name": "Rosca martelo", "sets": "2x12", "load": "6", "unit": "kg cada", "note": "Execução controlada."}, {"name": "Tríceps corda", "sets": "2x12", "load": "4", "unit": "t", "note": "Usar 4 t."}]}}};
+let workouts=JSON.parse(localStorage.getItem('rt_workouts')||'null')||DEFAULT_PLAN.workouts;
+let states=JSON.parse(localStorage.getItem('rt_states')||'{"A":{},"B":{},"C":{}}');
+let meta=JSON.parse(localStorage.getItem('rt_meta')||'{}');
+let current=meta.current||'A', disposition=meta.disposition||null, overallRpe=meta.overallRpe||null;
+let started=null, ended=null, ticker=null, selectedFile=null, pendingPlan=null;
 const efforts=['Leve','Leve/Médio','Médio','Médio/Pesado','Pesado'];
-const painOptions=['Sem dor','Com dor/desconforto'];
-
-let current='A';
-let started=null;
-let ended=null;
-let ticker=null;
-let disposition=null;
-let overallRpe=null;
-
-function readStoredJson(key,fallback){
- try{
-   const raw=localStorage.getItem(key);
-   return raw ? JSON.parse(raw) : fallback;
- }catch(e){
-   return fallback;
- }
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const pad=n=>String(n).padStart(2,'0'); const hhmm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function save(){localStorage.setItem('rt_workouts',JSON.stringify(workouts));localStorage.setItem('rt_states',JSON.stringify(states));localStorage.setItem('rt_meta',JSON.stringify({current,disposition,overallRpe,notes:$('#generalNotes').value}))}
+function items(){return workouts[current].items||[]}
+function elapsed(){return started?Math.max(0,Math.floor(((ended||new Date())-started)/1000)):0}
+function showTimer(){const s=elapsed();$('#timer').textContent=`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`}
+function loadText(i){return i.unit?`${i.load} ${i.unit}`:i.load}
+function completedCount(){return items().reduce((n,_,i)=>n+(states[current]?.[i]?.done?1:0),0)}
+function updateProgress(){$('#progressInfo').textContent=`${completedCount()} de ${items().length} itens concluídos`}
+function setReportState(){$('#reportBtn').disabled=!ended;$('#reportHint').textContent=ended?'Treino encerrado. Relatório liberado.':'Encerre o treino para liberar o relatório.'}
+function scoreGrid(id,out,setter,value){
+ const box=$(id);box.innerHTML='';for(let i=1;i<=10;i++){const b=document.createElement('button');b.textContent=i;if(value===i)b.classList.add('active');b.onclick=()=>{[...box.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');$(out).textContent=i;setter(i);save()};box.appendChild(b)}$(out).textContent=value||'—'
 }
-
-const states=readStoredJson('rt_states',{A:{},B:{},C:{}});
-['A','B','C'].forEach(k=>{if(!states[k] || typeof states[k]!=='object')states[k]={};});
-const meta=readStoredJson('rt_meta',{});
-
-const $=s=>document.querySelector(s);
-const $$=s=>[...document.querySelectorAll(s)];
-const pad=n=>String(n).padStart(2,'0');
-const hhmm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const ddmmyyyy=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-
-function save(){
- localStorage.setItem('rt_states',JSON.stringify(states));
- localStorage.setItem('rt_meta',JSON.stringify({
-   current,disposition,overallRpe,notes:$('#generalNotes').value
- }));
-}
-
-function elapsed(){
- return started ? Math.max(0,Math.floor(((ended||new Date())-started)/1000)) : 0;
-}
-
-function showTimer(){
- const s=elapsed();
- $('#timer').textContent=`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`;
-}
-
-function formatLoad(v,unit){
- const value=String(v??'').trim();
- if(!value)return 'não informado';
- return unit ? `${value} ${unit}` : value;
-}
-
-function scoreGrid(id,out,setter,initial){
- const box=$(id);
- box.innerHTML='';
- for(let i=1;i<=10;i++){
-   const b=document.createElement('button');
-   b.type='button';
-   b.textContent=i;
-   if(initial===i)b.classList.add('active');
-   b.addEventListener('click',()=>{
-     [...box.children].forEach(x=>x.classList.remove('active'));
-     b.classList.add('active');
-     $(out).textContent=i;
-     setter(i);
-     save();
-   });
-   box.appendChild(b);
- }
- $(out).textContent=initial||'—';
-}
-
-function makeChoiceGrid(className,options,currentValue,onChange){
- const grid=document.createElement('div');
- grid.className=className;
- options.forEach(opt=>{
-   const b=document.createElement('button');
-   b.type='button';
-   b.textContent=opt;
-   if(currentValue===opt)b.classList.add('active');
-   b.addEventListener('click',()=>{
-     [...grid.children].forEach(x=>x.classList.remove('active'));
-     b.classList.add('active');
-     onChange(opt);
-     save();
-   });
-   grid.appendChild(b);
- });
- return grid;
-}
-
-function completedCount(){
- return workouts[current].ex.reduce((n,_,i)=>n+(states[current]?.[i]?.done?1:0),0);
-}
-
-function updateProgress(){
- $('#progressInfo').textContent=`${completedCount()} de ${workouts[current].ex.length} exercícios concluídos`;
-}
-
-function setReportState(){
- const allowed=Boolean(started && ended);
- $('#reportBtn').disabled=!allowed;
- $('#reportHint').textContent=allowed
-   ? 'Treino encerrado. Relatório liberado.'
-   : 'Encerre o treino para liberar o relatório.';
-}
-
 function render(){
- $('#title').textContent=workouts[current].title;
- $$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.key===current));
-
- const list=$('#exerciseList');
- list.innerHTML='';
-
- workouts[current].ex.forEach((e,i)=>{
-   if(!states[current][i] || typeof states[current][i]!=='object')states[current][i]={};
-   const st=states[current][i];
-
-   const card=document.createElement('div');
-   card.className='card';
-
-   const head=document.createElement('div');
-   head.className='card-title';
-
-   const info=document.createElement('div');
-   const name=document.createElement('strong');
-   name.textContent=e[0];
-   const planned=document.createElement('div');
-   planned.className='planned';
-   planned.textContent=`Planejado: ${e[1]} • ${formatLoad(e[2],e[3])}`;
-   info.append(name,planned);
-
-   const doneLabel=document.createElement('label');
-   doneLabel.className='check';
-   const done=document.createElement('input');
-   done.type='checkbox';
-   done.checked=Boolean(st.done);
-   done.addEventListener('change',()=>{
-     st.done=done.checked;
-     if(st.done)delete st.status;
-     updateProgress();
-     save();
-   });
-   doneLabel.append(done,document.createTextNode('Feito'));
-   head.append(info,doneLabel);
-   card.appendChild(head);
-
-   const row=document.createElement('div');
-   row.className='row';
-   row.style.marginTop='10px';
-
-   const setsBox=document.createElement('div');
-   const setsLabel=document.createElement('label');
-   setsLabel.className='small';
-   setsLabel.textContent='Séries/reps';
-   const sets=document.createElement('input');
-   sets.type='text';
-   sets.value=st.sets??e[1];
-   sets.addEventListener('input',()=>{st.sets=sets.value;save();});
-   setsBox.append(setsLabel,sets);
-
-   const loadBox=document.createElement('div');
-   const loadLabel=document.createElement('label');
-   loadLabel.className='small';
-   loadLabel.textContent='Carga';
-   const load=document.createElement('input');
-   load.type='text';
-   load.value=st.load??e[2];
-   load.addEventListener('input',()=>{st.load=load.value;save();});
-   loadBox.append(loadLabel,load);
-
-   row.append(setsBox,loadBox);
-   card.appendChild(row);
-
-   const effortLabel=document.createElement('label');
-   effortLabel.className='small';
-   effortLabel.style.marginTop='10px';
-   effortLabel.textContent='Esforço';
-   card.append(effortLabel,makeChoiceGrid('effort-grid',efforts,st.effort,v=>st.effort=v));
-
-   const painLabel=document.createElement('label');
-   painLabel.className='small';
-   painLabel.style.marginTop='10px';
-   painLabel.textContent='Dor/desconforto';
-   card.append(painLabel,makeChoiceGrid('pain-grid',painOptions,st.pain,v=>st.pain=v));
-
-   const noteLabel=document.createElement('label');
-   noteLabel.className='small';
-   noteLabel.style.marginTop='10px';
-   noteLabel.textContent='Observação';
-   const note=document.createElement('textarea');
-   note.placeholder='Observação deste exercício...';
-   note.value=st.note||'';
-   note.addEventListener('input',()=>{st.note=note.value;save();});
-   card.append(noteLabel,note);
-
-   list.appendChild(card);
- });
-
- updateProgress();
+ $('#title').textContent=workouts[current].title;$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.key===current));
+ const list=$('#exerciseList');list.innerHTML='';states[current]=states[current]||{};
+ items().forEach((it,i)=>{
+  const s=states[current][i]||{};
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`<div class="card-title"><div><strong>${it.name}</strong><div class="planned">Planejado: ${it.sets} • ${loadText(it)||'-'}</div>${it.note?`<div class="mini">${it.note}</div>`:''}</div><label class="check"><input class="done" type="checkbox" ${s.done?'checked':''}> Feito</label></div>
+  <div class="row" style="margin-top:10px"><div><label class="small">${it.kind==='activity'?'Duração':'Séries/reps'}</label><input class="sets" type="text" value="${s.sets??it.sets}"></div><div><label class="small">Carga</label><input class="load" type="text" value="${s.load??it.load}"></div></div>
+  <div class="mini" style="margin-top:10px;font-weight:700">Esforço</div><div class="effort-grid effort" style="margin-top:6px"></div>
+  <div class="mini" style="margin-top:10px;font-weight:700">Dor/desconforto</div><div class="pain-grid pain" style="margin-top:6px"><button data-v="Não" class="${s.pain==='Não'?'active':''}">Não</button><button data-v="Sim" class="${s.pain==='Sim'?'active':''}">Sim</button></div>
+  <textarea class="note" style="margin-top:10px" placeholder="Observação opcional">${s.note||''}</textarea>`;
+  const eff=card.querySelector('.effort');efforts.forEach(v=>{const b=document.createElement('button');b.textContent=v;b.dataset.v=v;if(s.effort===v)b.classList.add('active');eff.appendChild(b)});
+  function persist(){states[current][i]={done:card.querySelector('.done').checked,sets:card.querySelector('.sets').value.trim(),load:card.querySelector('.load').value.trim(),effort:card.querySelector('.effort .active')?.dataset.v||'',pain:card.querySelector('.pain .active')?.dataset.v||'',note:card.querySelector('.note').value.trim()};save();updateProgress()}
+  card.oninput=persist;card.onchange=persist;eff.onclick=e=>{const b=e.target.closest('button');if(!b)return;[...eff.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');persist()};
+  card.querySelector('.pain').onclick=e=>{const b=e.target.closest('button');if(!b)return;[...card.querySelector('.pain').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');persist()};
+  list.appendChild(card)
+ }); updateProgress()
 }
+$('#generalNotes').value=meta.notes||'';scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);render();setReportState();
+$$('.tab').forEach(b=>b.onclick=()=>{if(started&&!ended){alert('Encerre o treino atual antes de trocar de ficha.');return}current=b.dataset.key;started=null;ended=null;$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar.';$('#reportWrap').hidden=true;setReportState();save();render()});
+$('#start').onclick=()=>{started=new Date();ended=null;$('#start').disabled=true;$('#stop').disabled=false;$('#timeInfo').textContent=`Início: ${hhmm(started)}`;setReportState();showTimer();ticker=setInterval(showTimer,1000)};
+function finish(){ended=new Date();clearInterval(ticker);ticker=null;$('#stop').disabled=true;showTimer();$('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;setReportState()}
+$('#stop').onclick=()=>{if(!started||ended)return;const pending=items().map((e,i)=>({name:e.name,done:!!states[current]?.[i]?.done})).filter(x=>!x.done);if(pending.length){const ok=confirm(`Os seguintes itens não foram marcados como Feito:\n\n${pending.map(x=>'• '+x.name).join('\n')}\n\nDeseja encerrar mesmo assim?`);if(!ok)return}finish()};
+$('#clearBtn').onclick=()=>{if(!confirm('Limpar apenas os registros do treino '+current+'?'))return;states[current]={};started=null;ended=null;if(ticker)clearInterval(ticker);$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar.';$('#reportWrap').hidden=true;save();render();setReportState()};
+$('#generalNotes').oninput=save;
+$('#reportBtn').onclick=()=>{if(!ended)return;const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';const lines=[`*_${day} (Treino ${current})_*`,''];if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);lines.push(`Início treino ${hhmm(started)}`,'');items().forEach((it,i)=>{const s=states[current][i]||{};lines.push(`*${it.name}*`);if(!s.done){lines.push('Status: Não realizado','');return}lines.push(`${it.kind==='activity'?'Duração':'Série'}: ${s.sets||it.sets}`);lines.push(`Carga: ${s.load||it.load||'não informado'}`);lines.push(`Esforço: ${s.effort||'não informado'}`);lines.push(`Dor/desconforto: ${s.pain||'não informado'}`);if(s.note)lines.push(`Observação: ${s.note}`);lines.push('')});lines.push(`Término: ${hhmm(ended)}`,`Duração total: ${Math.round(elapsed()/60)}min`);if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);const gn=$('#generalNotes').value.trim();if(gn)lines.push(`Observação geral: ${gn}`);$('#reportText').textContent=lines.join('\n');$('#reportWrap').hidden=false;$('#reportWrap').scrollIntoView({behavior:'smooth'})};
+$('#copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText($('#reportText').textContent);$('#copyStatus').textContent='Relatório copiado.'}catch(e){$('#copyStatus').textContent='Copie o texto manualmente.'}};
 
-function finishWorkout(){
- ended=new Date();
- if(ticker){clearInterval(ticker);ticker=null;}
- $('#stop').disabled=true;
- showTimer();
- $('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;
- setReportState();
- save();
+function decodeCompatiblePdf(buffer){
+ const bytes=new Uint8Array(buffer); let raw=''; const chunk=0x8000;
+ for(let i=0;i<bytes.length;i+=chunk) raw+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
+ const m=raw.match(/%RAFAEL_TRAINING_JSON_BEGIN\s*%([A-Za-z0-9+/=]+)\s*%RAFAEL_TRAINING_JSON_END/);
+ if(!m) throw new Error('Este PDF não está no padrão compatível com a Beta 1.2.');
+ const jsonText=decodeURIComponent(Array.from(atob(m[1])).map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+ const obj=JSON.parse(jsonText);
+ if(obj.schema!=='rafael-training-plan-v1'||!obj.workouts?.A||!obj.workouts?.B||!obj.workouts?.C) throw new Error('A estrutura da ficha não é válida.');
+ return obj
 }
-
-$$('.tab').forEach(b=>b.addEventListener('click',()=>{
- if(started && !ended){
-   alert('Encerre o treino atual antes de trocar de ficha.');
-   return;
- }
- current=b.dataset.key;
- started=null;
- ended=null;
- $('#timer').textContent='00:00:00';
- $('#start').disabled=false;
- $('#stop').disabled=true;
- $('#timeInfo').textContent='Pronto para iniciar.';
- $('#reportWrap').hidden=true;
- setReportState();
- render();
- save();
-}));
-
-$('#start').addEventListener('click',()=>{
- if(started && !ended)return;
- started=new Date();
- ended=null;
- $('#start').disabled=true;
- $('#stop').disabled=false;
- $('#timeInfo').textContent=`Início: ${hhmm(started)}`;
- $('#reportWrap').hidden=true;
- setReportState();
- showTimer();
- ticker=setInterval(showTimer,1000);
-});
-
-$('#stop').addEventListener('click',()=>{
- if(!started || ended)return;
-
- const pending=workouts[current].ex
-   .map((e,i)=>({index:i,name:e[0],done:Boolean(states[current]?.[i]?.done)}))
-   .filter(x=>!x.done);
-
- if(pending.length){
-   const nomes=pending.map(x=>`• ${x.name}`).join('\n');
-   const ok=confirm(
-     `Os seguintes exercícios não foram marcados como Feito:\n\n${nomes}\n\n`+
-     `Se você confirmar, eles serão registrados como NÃO REALIZADOS.\n\nDeseja encerrar o treino?`
-   );
-   if(!ok)return;
-
-   pending.forEach(x=>{
-     if(!states[current][x.index])states[current][x.index]={};
-     states[current][x.index].done=false;
-     states[current][x.index].status='not_done';
-   });
- }
-
- finishWorkout();
- render();
-});
-
-$('#generalNotes').addEventListener('input',save);
-
-$('#clearBtn').addEventListener('click',()=>{
- if(!confirm('Limpar apenas os registros do treino '+current+'?'))return;
- states[current]={};
- started=null;
- ended=null;
- if(ticker){clearInterval(ticker);ticker=null;}
- $('#timer').textContent='00:00:00';
- $('#start').disabled=false;
- $('#stop').disabled=true;
- $('#timeInfo').textContent='Pronto para iniciar.';
- $('#reportWrap').hidden=true;
- render();
- setReportState();
- save();
-});
-
-$('#reportBtn').addEventListener('click',()=>{
- if(!started || !ended){
-   alert('O relatório só pode ser gerado depois de iniciar e encerrar o treino.');
-   setReportState();
-   return;
- }
-
- const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';
- const lines=[`*_${day} (Treino ${current})_*`,''];
- lines.push(`Data: ${ddmmyyyy(started)}`);
- lines.push(`Início: ${hhmm(started)}`);
- lines.push(`Término: ${hhmm(ended)}`);
- lines.push(`Duração: ${Math.round(elapsed()/60)} min`);
- lines.push(`Disposição antes do treino: ${disposition ? disposition+'/10' : 'Não informado'}`);
- lines.push('');
-
- workouts[current].ex.forEach((e,i)=>{
-   const st=states[current][i]||{};
-   lines.push(`*${e[0]}*`);
-   if(!st.done){
-     lines.push('Status: Não realizado','');
-     return;
-   }
-   lines.push(`Série: ${st.sets||e[1]}`);
-   lines.push(`Carga: ${formatLoad(st.load??e[2],e[3])}`);
-   lines.push(`Esforço: ${st.effort||'não informado'}`);
-   lines.push(`Dor/desconforto: ${st.pain||'não informado'}`);
-   if(st.note)lines.push(`Observação: ${st.note}`);
-   lines.push('');
- });
-
- lines.push(`Esforço geral: ${overallRpe ? overallRpe+'/10' : 'Não informado'}`);
- const gn=$('#generalNotes').value.trim();
- if(gn)lines.push(`Observação geral: ${gn}`);
-
- $('#reportText').textContent=lines.join('\n');
- $('#reportWrap').hidden=false;
- $('#reportWrap').scrollIntoView({behavior:'smooth',block:'start'});
-});
-
-$('#copyBtn').addEventListener('click',async()=>{
- const txt=$('#reportText').textContent;
- try{
-   await navigator.clipboard.writeText(txt);
-   $('#copyStatus').textContent='Relatório copiado.';
- }catch(e){
-   $('#copyStatus').textContent='Selecione o texto do relatório e copie manualmente.';
- }
-});
-
-$('#pdfInput').addEventListener('change',async ev=>{
- const f=ev.target.files?.[0];
- if(!f)return;
- $('#pdfStatus').textContent='Lendo PDF…';
- try{
-   const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');
-   const data=new Uint8Array(await f.arrayBuffer());
-   const pdf=await pdfjs.getDocument({data,disableWorker:true}).promise;
-   let text='';
-   for(let p=1;p<=Math.min(pdf.numPages,10);p++){
-     const page=await pdf.getPage(p);
-     const c=await page.getTextContent();
-     text+=' '+c.items.map(x=>x.str).join(' ');
-   }
-   const all=Object.values(workouts).flatMap(w=>w.ex.map(e=>e[0]));
-   const found=all.filter(n=>text.toLowerCase().includes(n.toLowerCase()));
-   $('#pdfStatus').textContent=found.length
-     ? `PDF reconhecido: ${found.length} exercícios conhecidos encontrados. Nesta beta, a ficha atual foi preservada para evitar substituição incorreta.`
-     : 'PDF lido, mas não reconheci exercícios do padrão atual.';
- }catch(e){
-   $('#pdfStatus').textContent='Não consegui interpretar este PDF automaticamente. A ficha atual foi mantida.';
- }
-});
-
-if(meta.current && workouts[meta.current])current=meta.current;
-disposition=null;
-overallRpe=null;
-$('#generalNotes').value=typeof meta.notes==='string'?meta.notes:'';
-
-scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);
-scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);
-render();
-setReportState();
-showTimer();
-
-// Depois de esta versão carregar uma vez, remove o cache/PWA antigo para evitar
-// que o celular volte a exibir uma versão anterior do index.html.
-if('serviceWorker' in navigator){
- window.addEventListener('load',async()=>{
-   try{
-     const regs=await navigator.serviceWorker.getRegistrations();
-     await Promise.all(regs.map(r=>r.unregister()));
-     if('caches' in window){
-       const keys=await caches.keys();
-       await Promise.all(keys.map(k=>caches.delete(k)));
-     }
-   }catch(e){}
- });
-}
+$('#pdfInput').onchange=e=>{selectedFile=e.target.files?.[0]||null;pendingPlan=null;$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#importBtn').disabled=!selectedFile;$('#pdfStatus').textContent=selectedFile?`Arquivo selecionado: ${selectedFile.name}. Toque em IMPORTAR FICHA para validar.`:''};
+$('#importBtn').onclick=async()=>{if(!selectedFile)return;$('#pdfStatus').textContent='Validando ficha...';try{pendingPlan=decodeCompatiblePdf(await selectedFile.arrayBuffer());const a=pendingPlan.workouts.A.items.length,b=pendingPlan.workouts.B.items.length,c=pendingPlan.workouts.C.items.length;$('#preview').innerHTML=`<strong>Prévia da nova ficha</strong><br>Treino A: ${a} itens<br>Treino B: ${b} itens<br>Treino C: ${c} itens<br><br><span class="mini">A ficha atual só será substituída depois da confirmação abaixo.</span>`;$('#preview').hidden=false;$('#confirmImportBtn').hidden=false;$('#pdfStatus').textContent='Ficha reconhecida com sucesso.'}catch(err){pendingPlan=null;$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent=err.message+' A ficha atual foi mantida.'}};
+$('#confirmImportBtn').onclick=()=>{if(!pendingPlan)return;const ok=confirm('Confirmar esta nova ficha? Os registros preenchidos do treino atual serão limpos, mas a nova ficha só entra após esta confirmação.');if(!ok)return;workouts=pendingPlan.workouts;states={A:{},B:{},C:{}};current='A';localStorage.setItem('rt_workouts',JSON.stringify(workouts));save();started=null;ended=null;$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Nova ficha importada com sucesso.';$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent='Nova ficha ativa.';render();setReportState()};
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 </script>
-</body>
-</html>
+</body></html>
