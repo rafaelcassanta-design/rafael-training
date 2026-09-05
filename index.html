@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17365D">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Rafael Training Beta 1.5</title>
+<title>Rafael Training Beta 1.6</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -40,12 +40,13 @@ select{font:inherit}
 <body>
 <div class="app">
 <div class="top">
-  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.5</div></div>
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.6</div></div>
   <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
 </div>
 <div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
-<div class="nav2">
+<div class="nav2" style="grid-template-columns:1fr 1fr 1fr">
   <button id="showTraining" class="active">TREINOS</button>
+  <button id="showKrav">KRAV MAGÁ</button>
   <button id="showEvaluations">AVALIAÇÃO CORPORAL</button>
 </div>
 <div id="trainingArea">
@@ -83,6 +84,60 @@ select{font:inherit}
 <div id="reportWrap" class="card" hidden><div style="font-weight:800;margin-bottom:8px">Relatório pronto</div><div id="reportText" class="report"></div><button id="copyBtn" style="width:100%;margin-top:10px">Copiar relatório</button><div id="copyStatus" class="status"></div></div>
 </div>
 </div>
+
+<div id="kravArea" class="hidden">
+  <div class="card">
+    <div class="section-title" style="margin-top:0">Treino de Krav Magá — Sábado</div>
+    <p class="mini">Acompanhe como musculação, Pilates e alongamento estão repercutindo na preparação para a graduação.</p>
+    <div class="krav-grid">
+      <div><label class="small">Data</label><input id="kravDate" type="date"></div>
+      <div><label class="small">Disposição antes</label><input id="kravDisposition" type="number" min="0" max="10" placeholder="0 a 10"></div>
+      <div><label class="small">Início</label><input id="kravStart" type="time"></div>
+      <div><label class="small">Término</label><input id="kravEnd" type="time"></div>
+      <div><label class="small">Duração total</label><input id="kravDuration" type="text" placeholder="Ex.: 120 min"></div>
+      <div><label class="small">Esforço geral</label><input id="kravOverall" type="number" min="0" max="10" placeholder="0 a 10"></div>
+      <div><label class="small">Condicionamento físico</label><input id="kravConditioningTime" type="text" placeholder="Ex.: 60 min"></div>
+      <div><label class="small">Técnica</label><input id="kravTechniqueTime" type="text" placeholder="Ex.: 40 min"></div>
+      <div><label class="small">Combate / sparring</label><input id="kravSparringTime" type="text" placeholder="Ex.: 20 min"></div>
+      <div><label class="small">Outros</label><input id="kravOtherTime" type="text" placeholder="Ex.: 10 min"></div>
+      <div class="full"><label class="small">Atividades realizadas</label><textarea id="kravActivities" placeholder="Ex.: trote, aeróbio, socos com pesos leves, chutes, defesa, combate..."></textarea></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title" style="margin-top:0">Desempenho percebido (0–10)</div>
+    <div class="metric-grid">
+      <div class="metric-card"><label>Condicionamento aeróbio</label><input id="kravAerobic" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Explosão</label><input id="kravExplosion" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Potência dos socos</label><input id="kravPunch" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Potência dos chutes</label><input id="kravKick" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Velocidade / agilidade</label><input id="kravSpeed" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Equilíbrio</label><input id="kravBalance" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Mobilidade / alongamento</label><input id="kravMobility" type="number" min="0" max="10"></div>
+      <div class="metric-card"><label>Recuperação entre sequências</label><input id="kravRecovery" type="number" min="0" max="10"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title" style="margin-top:0">Sintomas e resposta do corpo</div>
+    <div class="krav-grid">
+      <div><label class="small">Dor/desconforto</label><select id="kravPain" style="width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:8px"><option value="">Selecione</option><option>Não</option><option>Sim</option></select></div>
+      <div><label class="small">Tontura</label><select id="kravDizziness" style="width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:8px"><option value="">Selecione</option><option>Não</option><option>Sim</option></select></div>
+      <div><label class="small">Falta de ar fora do esperado</label><select id="kravBreath" style="width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:8px"><option value="">Selecione</option><option>Não</option><option>Sim</option></select></div>
+      <div><label class="small">Local da dor/desconforto</label><input id="kravPainWhere" type="text" placeholder="Ex.: lombar, joelho..."></div>
+      <div class="full"><label class="small">Como os treinos da semana repercutiram hoje?</label><textarea id="kravTransfer" placeholder="Ex.: pernas mais resistentes, soco sem potência, melhor recuperação, quadril preso nos chutes..."></textarea></div>
+      <div class="full"><label class="small">Observações gerais</label><textarea id="kravNotes"></textarea></div>
+    </div>
+    <button id="saveKrav" class="primary" style="width:100%;margin-top:12px">SALVAR TREINO DE KRAV MAGÁ</button>
+    <div id="kravStatus" class="status"></div>
+  </div>
+  <div class="card">
+    <div class="section-title" style="margin-top:0">Relatório</div>
+    <button id="generateKravReport" style="width:100%">GERAR RELATÓRIO KRAV MAGÁ</button>
+    <div id="kravReport" class="krav-summary" style="margin-top:10px">Salve um treino para gerar o relatório.</div>
+  </div>
+  <div class="section-title">Histórico de Krav Magá</div>
+  <div id="kravHistory"></div>
+</div>
+
 <div id="evaluationArea" class="hidden">
   <div class="card">
     <div class="section-title" style="margin-top:0">Nova avaliação corporal</div>
@@ -189,17 +244,46 @@ $('#pdfInput').onchange=e=>{selectedFile=e.target.files?.[0]||null;pendingPlan=n
 $('#importBtn').onclick=async()=>{if(!selectedFile)return;$('#pdfStatus').textContent='Validando ficha...';try{pendingPlan=decodeCompatiblePdf(await selectedFile.arrayBuffer());const a=pendingPlan.workouts.A.items.length,b=pendingPlan.workouts.B.items.length,c=pendingPlan.workouts.C.items.length;$('#preview').innerHTML=`<strong>Prévia da nova ficha</strong><br>Treino A: ${a} itens<br>Treino B: ${b} itens<br>Treino C: ${c} itens<br><br><span class="mini">A ficha atual só será substituída depois da confirmação abaixo.</span>`;$('#preview').hidden=false;$('#confirmImportBtn').hidden=false;$('#pdfStatus').textContent='Ficha reconhecida com sucesso.'}catch(err){pendingPlan=null;$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent=err.message+' A ficha atual foi mantida.'}};
 $('#confirmImportBtn').onclick=()=>{if(!pendingPlan)return;const ok=confirm('Confirmar esta nova ficha? Os registros preenchidos do treino atual serão limpos, mas a nova ficha só entra após esta confirmação.');if(!ok)return;workouts=pendingPlan.workouts;states={A:{},B:{},C:{}};current='A';disposition=null;overallRpe=null;clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');localStorage.setItem('rt_workouts',JSON.stringify(workouts));save();started=null;ended=null;$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Nova ficha importada com sucesso.';$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent='Nova ficha ativa.';render();setReportState()};
 
+
+const kravHistoryData=JSON.parse(localStorage.getItem('rt_krav_history')||'[]');
+function saveKravHistory(){localStorage.setItem('rt_krav_history',JSON.stringify(kravHistoryData))}
+function kv(id){return $(id).value.trim()}
+function clamp10(v){const n=Number(v);return Number.isFinite(n)&&v!==''?String(Math.max(0,Math.min(10,n))):''}
+function fmtKravDate(d){return new Date(d+'T12:00:00').toLocaleDateString('pt-BR')}
+function renderKravHistory(){
+  const h=$('#kravHistory');h.innerHTML='';
+  if(!kravHistoryData.length){h.innerHTML='<div class="card mini">Nenhum treino de Krav Magá registrado ainda.</div>';return}
+  kravHistoryData.slice().reverse().forEach(r=>{
+    const c=document.createElement('div');c.className='eval-card';
+    c.innerHTML=`<div class="card-title"><div><strong>${fmtKravDate(r.date)}</strong><div class="mini">Duração: ${esc(r.duration)||'—'} | Esforço geral: ${esc(r.overall)||'—'}/10</div></div><button data-kdel="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div><div class="mini" style="margin-top:6px">Aeróbio ${esc(r.aerobic)||'—'}/10 | Explosão ${esc(r.explosion)||'—'}/10 | Socos ${esc(r.punch)||'—'}/10 | Chutes ${esc(r.kick)||'—'}/10</div><div class="mini">Velocidade ${esc(r.speed)||'—'}/10 | Equilíbrio ${esc(r.balance)||'—'}/10 | Mobilidade ${esc(r.mobility)||'—'}/10 | Recuperação ${esc(r.recovery)||'—'}/10</div>${r.transfer?`<div style="margin-top:8px"><strong>Transferência da semana:</strong> ${esc(r.transfer)}</div>`:''}`;
+    h.appendChild(c)
+  });
+  h.querySelectorAll('[data-kdel]').forEach(b=>b.onclick=()=>{if(!confirm('Excluir este treino de Krav Magá?'))return;const i=kravHistoryData.findIndex(x=>x.id===Number(b.dataset.kdel));if(i>=0)kravHistoryData.splice(i,1);saveKravHistory();renderKravHistory()});
+}
+$('#saveKrav').onclick=()=>{
+  if(!kv('#kravDate')){$('#kravStatus').textContent='⚠️ Informe a data do treino.';return}
+  const r={id:Date.now(),date:kv('#kravDate'),disposition:clamp10(kv('#kravDisposition')),start:kv('#kravStart'),end:kv('#kravEnd'),duration:kv('#kravDuration'),overall:clamp10(kv('#kravOverall')),conditioningTime:kv('#kravConditioningTime'),techniqueTime:kv('#kravTechniqueTime'),sparringTime:kv('#kravSparringTime'),otherTime:kv('#kravOtherTime'),activities:kv('#kravActivities'),aerobic:clamp10(kv('#kravAerobic')),explosion:clamp10(kv('#kravExplosion')),punch:clamp10(kv('#kravPunch')),kick:clamp10(kv('#kravKick')),speed:clamp10(kv('#kravSpeed')),balance:clamp10(kv('#kravBalance')),mobility:clamp10(kv('#kravMobility')),recovery:clamp10(kv('#kravRecovery')),pain:kv('#kravPain'),dizziness:kv('#kravDizziness'),breath:kv('#kravBreath'),painWhere:kv('#kravPainWhere'),transfer:kv('#kravTransfer'),notes:kv('#kravNotes')};
+  kravHistoryData.push(r);kravHistoryData.sort((a,b)=>a.date.localeCompare(b.date));saveKravHistory();$('#kravStatus').textContent='Treino de Krav Magá salvo com sucesso.';renderKravHistory();
+};
+function makeKravReport(r){return `*_Sábado (Krav Magá)_*\n\nData: ${fmtKravDate(r.date)}\nDisposição antes do treino: ${r.disposition?`${r.disposition}/10`:'não informado'}\nInício: ${r.start||'não informado'}\nTérmino: ${r.end||'não informado'}\nDuração total: ${r.duration||'não informado'}\nEsforço geral: ${r.overall?`${r.overall}/10`:'não informado'}\n\n*Composição do treino*\nCondicionamento físico: ${r.conditioningTime||'não informado'}\nTécnica: ${r.techniqueTime||'não informado'}\nCombate / sparring: ${r.sparringTime||'não informado'}\nOutros: ${r.otherTime||'não informado'}\nAtividades: ${r.activities||'não informado'}\n\n*Desempenho percebido*\nCondicionamento aeróbio: ${r.aerobic?`${r.aerobic}/10`:'não informado'}\nExplosão: ${r.explosion?`${r.explosion}/10`:'não informado'}\nPotência dos socos: ${r.punch?`${r.punch}/10`:'não informado'}\nPotência dos chutes: ${r.kick?`${r.kick}/10`:'não informado'}\nVelocidade / agilidade: ${r.speed?`${r.speed}/10`:'não informado'}\nEquilíbrio: ${r.balance?`${r.balance}/10`:'não informado'}\nMobilidade / alongamento: ${r.mobility?`${r.mobility}/10`:'não informado'}\nRecuperação entre sequências: ${r.recovery?`${r.recovery}/10`:'não informado'}\n\n*Resposta do corpo*\nDor/desconforto: ${r.pain||'não informado'}\nLocal: ${r.painWhere||'—'}\nTontura: ${r.dizziness||'não informado'}\nFalta de ar fora do esperado: ${r.breath||'não informado'}\n\n*Transferência dos treinos da semana*\n${r.transfer||'não informado'}\n\nObservações gerais: ${r.notes||'—'}`}
+$('#generateKravReport').onclick=()=>{if(!kravHistoryData.length){$('#kravReport').textContent='Salve um treino para gerar o relatório.';return}$('#kravReport').textContent=makeKravReport(kravHistoryData[kravHistoryData.length-1])};
+renderKravHistory();
+
 const evaluations=JSON.parse(localStorage.getItem('rt_evaluations')||'[]');
 
 function showArea(which){
-  const train=which==='training';
+  const train=which==='training', krav=which==='krav', evals=which==='evaluations';
   $('#trainingArea').classList.toggle('hidden',!train);
-  $('#evaluationArea').classList.toggle('hidden',train);
+  $('#kravArea').classList.toggle('hidden',!krav);
+  $('#evaluationArea').classList.toggle('hidden',!evals);
   $('#showTraining').classList.toggle('active',train);
-  $('#showEvaluations').classList.toggle('active',!train);
-  if(!train) renderEvaluations();
+  $('#showKrav').classList.toggle('active',krav);
+  $('#showEvaluations').classList.toggle('active',evals);
+  if(krav) renderKravHistory();
+  if(evals) renderEvaluations();
 }
 $('#showTraining').onclick=()=>showArea('training');
+$('#showKrav').onclick=()=>showArea('krav');
 $('#showEvaluations').onclick=()=>showArea('evaluations');
 
 let evalAttachment=null;
