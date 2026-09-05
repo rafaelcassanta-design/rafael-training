@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17365D">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Rafael Training Beta 1.6</title>
+<title>Rafael Training Beta 1.7</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -40,7 +40,7 @@ select{font:inherit}
 <body>
 <div class="app">
 <div class="top">
-  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.6</div></div>
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.7</div></div>
   <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
 </div>
 <div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
@@ -260,9 +260,30 @@ function renderKravHistory(){
   });
   h.querySelectorAll('[data-kdel]').forEach(b=>b.onclick=()=>{if(!confirm('Excluir este treino de Krav Magá?'))return;const i=kravHistoryData.findIndex(x=>x.id===Number(b.dataset.kdel));if(i>=0)kravHistoryData.splice(i,1);saveKravHistory();renderKravHistory()});
 }
+
+let kravAttachment=null;
+$('#kravFile').onchange=async e=>{
+  const f=e.target.files?.[0];
+  if(!f){kravAttachment=null;$('#kravFileInfo').textContent='';return}
+  const max=2*1024*1024;
+  if(f.size>max){
+    kravAttachment={name:f.name,type:f.type,size:f.size,data:null};
+    $('#kravFileInfo').textContent=`${f.name} selecionado. Nesta beta, PDFs acima de 2 MB ficam registrados apenas pelo nome.`;
+    return;
+  }
+  const data=await new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result);
+    r.onerror=rej;
+    r.readAsDataURL(f);
+  });
+  kravAttachment={name:f.name,type:f.type,size:f.size,data};
+  $('#kravFileInfo').textContent=`${f.name} pronto para salvar junto com o treino.`;
+};
+
 $('#saveKrav').onclick=()=>{
   if(!kv('#kravDate')){$('#kravStatus').textContent='⚠️ Informe a data do treino.';return}
-  const r={id:Date.now(),date:kv('#kravDate'),disposition:clamp10(kv('#kravDisposition')),start:kv('#kravStart'),end:kv('#kravEnd'),duration:kv('#kravDuration'),overall:clamp10(kv('#kravOverall')),conditioningTime:kv('#kravConditioningTime'),techniqueTime:kv('#kravTechniqueTime'),sparringTime:kv('#kravSparringTime'),otherTime:kv('#kravOtherTime'),activities:kv('#kravActivities'),aerobic:clamp10(kv('#kravAerobic')),explosion:clamp10(kv('#kravExplosion')),punch:clamp10(kv('#kravPunch')),kick:clamp10(kv('#kravKick')),speed:clamp10(kv('#kravSpeed')),balance:clamp10(kv('#kravBalance')),mobility:clamp10(kv('#kravMobility')),recovery:clamp10(kv('#kravRecovery')),pain:kv('#kravPain'),dizziness:kv('#kravDizziness'),breath:kv('#kravBreath'),painWhere:kv('#kravPainWhere'),transfer:kv('#kravTransfer'),notes:kv('#kravNotes')};
+  const r={id:Date.now(),date:kv('#kravDate'),disposition:clamp10(kv('#kravDisposition')),start:kv('#kravStart'),end:kv('#kravEnd'),duration:kv('#kravDuration'),overall:clamp10(kv('#kravOverall')),conditioningTime:kv('#kravConditioningTime'),techniqueTime:kv('#kravTechniqueTime'),sparringTime:kv('#kravSparringTime'),otherTime:kv('#kravOtherTime'),activities:kv('#kravActivities'),aerobic:clamp10(kv('#kravAerobic')),explosion:clamp10(kv('#kravExplosion')),punch:clamp10(kv('#kravPunch')),kick:clamp10(kv('#kravKick')),speed:clamp10(kv('#kravSpeed')),balance:clamp10(kv('#kravBalance')),mobility:clamp10(kv('#kravMobility')),recovery:clamp10(kv('#kravRecovery')),pain:kv('#kravPain'),dizziness:kv('#kravDizziness'),breath:kv('#kravBreath'),painWhere:kv('#kravPainWhere'),transfer:kv('#kravTransfer'),notes:kv('#kravNotes'),attachment:kravAttachment};
   kravHistoryData.push(r);kravHistoryData.sort((a,b)=>a.date.localeCompare(b.date));saveKravHistory();$('#kravStatus').textContent='Treino de Krav Magá salvo com sucesso.';renderKravHistory();
 };
 function makeKravReport(r){return `*_Sábado (Krav Magá)_*\n\nData: ${fmtKravDate(r.date)}\nDisposição antes do treino: ${r.disposition?`${r.disposition}/10`:'não informado'}\nInício: ${r.start||'não informado'}\nTérmino: ${r.end||'não informado'}\nDuração total: ${r.duration||'não informado'}\nEsforço geral: ${r.overall?`${r.overall}/10`:'não informado'}\n\n*Composição do treino*\nCondicionamento físico: ${r.conditioningTime||'não informado'}\nTécnica: ${r.techniqueTime||'não informado'}\nCombate / sparring: ${r.sparringTime||'não informado'}\nOutros: ${r.otherTime||'não informado'}\nAtividades: ${r.activities||'não informado'}\n\n*Desempenho percebido*\nCondicionamento aeróbio: ${r.aerobic?`${r.aerobic}/10`:'não informado'}\nExplosão: ${r.explosion?`${r.explosion}/10`:'não informado'}\nPotência dos socos: ${r.punch?`${r.punch}/10`:'não informado'}\nPotência dos chutes: ${r.kick?`${r.kick}/10`:'não informado'}\nVelocidade / agilidade: ${r.speed?`${r.speed}/10`:'não informado'}\nEquilíbrio: ${r.balance?`${r.balance}/10`:'não informado'}\nMobilidade / alongamento: ${r.mobility?`${r.mobility}/10`:'não informado'}\nRecuperação entre sequências: ${r.recovery?`${r.recovery}/10`:'não informado'}\n\n*Resposta do corpo*\nDor/desconforto: ${r.pain||'não informado'}\nLocal: ${r.painWhere||'—'}\nTontura: ${r.dizziness||'não informado'}\nFalta de ar fora do esperado: ${r.breath||'não informado'}\n\n*Transferência dos treinos da semana*\n${r.transfer||'não informado'}\n\nObservações gerais: ${r.notes||'—'}`}
