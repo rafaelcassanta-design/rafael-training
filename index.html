@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17365D">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Rafael Training Beta 1.7</title>
+<title>Rafael Training Beta 1.8</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -40,7 +40,7 @@ select{font:inherit}
 <body>
 <div class="app">
 <div class="top">
-  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.7</div></div>
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.8</div></div>
   <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
 </div>
 <div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
@@ -125,6 +125,11 @@ select{font:inherit}
       <div><label class="small">Local da dor/desconforto</label><input id="kravPainWhere" type="text" placeholder="Ex.: lombar, joelho..."></div>
       <div class="full"><label class="small">Como os treinos da semana repercutiram hoje?</label><textarea id="kravTransfer" placeholder="Ex.: pernas mais resistentes, soco sem potência, melhor recuperação, quadril preso nos chutes..."></textarea></div>
       <div class="full"><label class="small">Observações gerais</label><textarea id="kravNotes"></textarea></div>
+      <div class="full">
+        <label class="small">Anexar PDF do treino</label>
+        <input id="kravFile" type="file" accept="application/pdf">
+        <div id="kravFileInfo" class="file-chip"></div>
+      </div>
     </div>
     <button id="saveKrav" class="primary" style="width:100%;margin-top:12px">SALVAR TREINO DE KRAV MAGÁ</button>
     <div id="kravStatus" class="status"></div>
@@ -255,31 +260,40 @@ function renderKravHistory(){
   if(!kravHistoryData.length){h.innerHTML='<div class="card mini">Nenhum treino de Krav Magá registrado ainda.</div>';return}
   kravHistoryData.slice().reverse().forEach(r=>{
     const c=document.createElement('div');c.className='eval-card';
-    c.innerHTML=`<div class="card-title"><div><strong>${fmtKravDate(r.date)}</strong><div class="mini">Duração: ${esc(r.duration)||'—'} | Esforço geral: ${esc(r.overall)||'—'}/10</div></div><button data-kdel="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div><div class="mini" style="margin-top:6px">Aeróbio ${esc(r.aerobic)||'—'}/10 | Explosão ${esc(r.explosion)||'—'}/10 | Socos ${esc(r.punch)||'—'}/10 | Chutes ${esc(r.kick)||'—'}/10</div><div class="mini">Velocidade ${esc(r.speed)||'—'}/10 | Equilíbrio ${esc(r.balance)||'—'}/10 | Mobilidade ${esc(r.mobility)||'—'}/10 | Recuperação ${esc(r.recovery)||'—'}/10</div>${r.transfer?`<div style="margin-top:8px"><strong>Transferência da semana:</strong> ${esc(r.transfer)}</div>`:''}`;
+    c.innerHTML=`<div class="card-title"><div><strong>${fmtKravDate(r.date)}</strong><div class="mini">Duração: ${esc(r.duration)||'—'} | Esforço geral: ${esc(r.overall)||'—'}/10</div></div><button data-kdel="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div><div class="mini" style="margin-top:6px">Aeróbio ${esc(r.aerobic)||'—'}/10 | Explosão ${esc(r.explosion)||'—'}/10 | Socos ${esc(r.punch)||'—'}/10 | Chutes ${esc(r.kick)||'—'}/10</div><div class="mini">Velocidade ${esc(r.speed)||'—'}/10 | Equilíbrio ${esc(r.balance)||'—'}/10 | Mobilidade ${esc(r.mobility)||'—'}/10 | Recuperação ${esc(r.recovery)||'—'}/10</div>${r.transfer?`<div style="margin-top:8px"><strong>Transferência da semana:</strong> ${esc(r.transfer)}</div>`:''}${r.attachment&&r.attachment.name?`<div class="mini" style="margin-top:6px">PDF: ${esc(r.attachment.name)}</div>`:''}`;
     h.appendChild(c)
   });
   h.querySelectorAll('[data-kdel]').forEach(b=>b.onclick=()=>{if(!confirm('Excluir este treino de Krav Magá?'))return;const i=kravHistoryData.findIndex(x=>x.id===Number(b.dataset.kdel));if(i>=0)kravHistoryData.splice(i,1);saveKravHistory();renderKravHistory()});
 }
 
 let kravAttachment=null;
-$('#kravFile').onchange=async e=>{
-  const f=e.target.files?.[0];
-  if(!f){kravAttachment=null;$('#kravFileInfo').textContent='';return}
-  const max=2*1024*1024;
-  if(f.size>max){
-    kravAttachment={name:f.name,type:f.type,size:f.size,data:null};
-    $('#kravFileInfo').textContent=`${f.name} selecionado. Nesta beta, PDFs acima de 2 MB ficam registrados apenas pelo nome.`;
-    return;
-  }
-  const data=await new Promise((res,rej)=>{
-    const r=new FileReader();
-    r.onload=()=>res(r.result);
-    r.onerror=rej;
-    r.readAsDataURL(f);
+const kravFileEl=$('#kravFile');
+if(kravFileEl){
+  kravFileEl.addEventListener('change', async (e)=>{
+    const f=e.target.files && e.target.files[0];
+    const info=$('#kravFileInfo');
+    if(!f){kravAttachment=null;if(info)info.textContent='';return}
+    const max=2*1024*1024;
+    if(f.size>max){
+      kravAttachment={name:f.name,type:f.type,size:f.size,data:null};
+      if(info)info.textContent=f.name+' selecionado. Acima de 2 MB: ficará salvo apenas o nome do arquivo nesta beta.';
+      return;
+    }
+    try{
+      const data=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();
+        reader.onload=()=>resolve(reader.result);
+        reader.onerror=()=>reject(reader.error);
+        reader.readAsDataURL(f);
+      });
+      kravAttachment={name:f.name,type:f.type,size:f.size,data:data};
+      if(info)info.textContent=f.name+' pronto para salvar junto com o treino.';
+    }catch(err){
+      kravAttachment={name:f.name,type:f.type,size:f.size,data:null};
+      if(info)info.textContent='Não foi possível guardar o conteúdo; o nome do PDF será mantido.';
+    }
   });
-  kravAttachment={name:f.name,type:f.type,size:f.size,data};
-  $('#kravFileInfo').textContent=`${f.name} pronto para salvar junto com o treino.`;
-};
+}
 
 $('#saveKrav').onclick=()=>{
   if(!kv('#kravDate')){$('#kravStatus').textContent='⚠️ Informe a data do treino.';return}
