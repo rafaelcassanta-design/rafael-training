@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17365D">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Rafael Training Beta 1.9</title>
+<title>Rafael Training Beta 2.0</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -40,7 +40,7 @@ select{font:inherit}
 <body>
 <div class="app">
 <div class="top">
-  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 1.8</div></div>
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 2.0</div></div>
   <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
 </div>
 <div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
@@ -82,6 +82,8 @@ select{font:inherit}
 <button id="clearBtn" style="width:100%;margin-top:8px">Limpar treino atual</button>
 </div>
 <div id="reportWrap" class="card" hidden><div style="font-weight:800;margin-bottom:8px">Relatório pronto</div><div id="reportText" class="report"></div><button id="copyBtn" style="width:100%;margin-top:10px">Copiar relatório</button><div id="copyStatus" class="status"></div></div>
+<div class="section-title">Histórico de musculação</div>
+<div id="workoutHistory"></div>
 </div>
 </div>
 
@@ -188,35 +190,53 @@ const DEFAULT_PLAN={"schema": "rafael-training-plan-v1", "version": "2026-08-29"
 let workouts=JSON.parse(localStorage.getItem('rt_workouts')||'null')||DEFAULT_PLAN.workouts;
 let states=JSON.parse(localStorage.getItem('rt_states')||'{"A":{},"B":{},"C":{}}');
 let meta=JSON.parse(localStorage.getItem('rt_meta')||'{}');
-let current=meta.current||'A', disposition=null, overallRpe=null;
-let started=null, ended=null, ticker=null, selectedFile=null, pendingPlan=null;
+let workoutHistory=JSON.parse(localStorage.getItem('rt_workout_history')||'[]');
+let current=meta.current||'A', disposition=Number(meta.disposition)||null, overallRpe=Number(meta.overallRpe)||null;
+let started=meta.started?new Date(meta.started):null, ended=meta.ended?new Date(meta.ended):null, ticker=null, selectedFile=null, pendingPlan=null;
+let activityTimers=meta.activityTimers&&typeof meta.activityTimers==='object'?meta.activityTimers:{};
 const efforts=['Leve','Leve/Médio','Médio','Médio/Pesado','Pesado'];
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const pad=n=>String(n).padStart(2,'0'); const hhmm=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
-function save(){localStorage.setItem('rt_workouts',JSON.stringify(workouts));localStorage.setItem('rt_states',JSON.stringify(states));localStorage.setItem('rt_meta',JSON.stringify({current,disposition,overallRpe,notes:$('#generalNotes').value}))}
+const ddmmyyyy=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+function save(){
+ localStorage.setItem('rt_workouts',JSON.stringify(workouts));
+ localStorage.setItem('rt_states',JSON.stringify(states));
+ localStorage.setItem('rt_meta',JSON.stringify({current,disposition,overallRpe,notes:$('#generalNotes').value,started:started?started.toISOString():null,ended:ended?ended.toISOString():null,activityTimers}));
+}
+function saveWorkoutHistory(){localStorage.setItem('rt_workout_history',JSON.stringify(workoutHistory))}
 function items(){return workouts[current].items||[]}
 function elapsed(){return started?Math.max(0,Math.floor(((ended||new Date())-started)/1000)):0}
 function showTimer(){const s=elapsed();$('#timer').textContent=`${pad(Math.floor(s/3600))}:${pad(Math.floor((s%3600)/60))}:${pad(s%60)}`}
+function activityKey(i){return `${current}:${i}`}
+function activityElapsed(i){const t=activityTimers[activityKey(i)];if(!t?.started)return 0;return Math.max(0,Math.floor(((t.ended?new Date(t.ended):new Date())-new Date(t.started))/1000))}
+function fmtDurationSec(sec){return `${Math.round(sec/60)} min`}
 function loadText(i){return i.unit?`${i.load} ${i.unit}`:i.load}
 function completedCount(){return items().reduce((n,_,i)=>n+(states[current]?.[i]?.done?1:0),0)}
 function updateProgress(){$('#progressInfo').textContent=`${completedCount()} de ${items().length} itens concluídos`}
-function setReportState(){$('#reportBtn').disabled=!ended;$('#reportHint').textContent=ended?'Treino encerrado. Relatório liberado.':'Encerre o treino para liberar o relatório.'}
-function clearScoreGrid(id,out){
-  const box=$(id);
-  [...box.children].forEach(x=>x.classList.remove('active'));
-  $(out).textContent='—';
-}
-function scoreGrid(id,out,setter,value){
- const box=$(id);box.innerHTML='';for(let i=1;i<=10;i++){const b=document.createElement('button');b.textContent=i;if(value===i)b.classList.add('active');b.onclick=()=>{[...box.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');$(out).textContent=i;setter(i);save()};box.appendChild(b)}$(out).textContent=value||'—'
+function setReportState(){$('#reportBtn').disabled=!ended;$('#reportHint').textContent=ended?'Musculação encerrada. Complete as atividades extras, se houver, e gere o relatório.':'Encerre a musculação para liberar o relatório.'}
+function clearScoreGrid(id,out){const box=$(id);[...box.children].forEach(x=>x.classList.remove('active'));$(out).textContent='—'}
+function scoreGrid(id,out,setter,value){const box=$(id);box.innerHTML='';for(let i=1;i<=10;i++){const b=document.createElement('button');b.textContent=i;if(value===i)b.classList.add('active');b.onclick=()=>{[...box.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');$(out).textContent=i;setter(i);save()};box.appendChild(b)}$(out).textContent=value||'—'}
+function escHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderWorkoutHistory(){
+ const h=$('#workoutHistory'); if(!h)return; h.innerHTML='';
+ if(!workoutHistory.length){h.innerHTML='<div class="card mini">Nenhum relatório de musculação salvo ainda.</div>';return}
+ workoutHistory.slice().reverse().forEach(r=>{
+  const c=document.createElement('div');c.className='eval-card';
+  c.innerHTML=`<div class="card-title"><div><strong>${escHtml(r.date)} — Treino ${escHtml(r.workout)}</strong><div class="mini">Musculação: ${escHtml(r.muscleDuration)}${r.extraDuration?` | Extras: ${escHtml(r.extraDuration)}`:''}</div></div><button data-whdel="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div><button data-whcopy="${r.id}" style="width:100%;margin-top:10px">COPIAR RELATÓRIO</button>`;
+  h.appendChild(c)
+ });
+ h.querySelectorAll('[data-whcopy]').forEach(b=>b.onclick=async()=>{const r=workoutHistory.find(x=>String(x.id)===b.dataset.whcopy);if(!r)return;try{await navigator.clipboard.writeText(r.text);b.textContent='RELATÓRIO COPIADO!';setTimeout(()=>b.textContent='COPIAR RELATÓRIO',1200)}catch(e){const ta=document.createElement('textarea');ta.value=r.text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();b.textContent='RELATÓRIO COPIADO!';setTimeout(()=>b.textContent='COPIAR RELATÓRIO',1200)}});
+ h.querySelectorAll('[data-whdel]').forEach(b=>b.onclick=()=>{if(!confirm('Excluir este relatório do histórico?'))return;workoutHistory=workoutHistory.filter(x=>String(x.id)!==b.dataset.whdel);saveWorkoutHistory();renderWorkoutHistory()})
 }
 function render(){
  $('#title').textContent=workouts[current].title;$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.key===current));
  const list=$('#exerciseList');list.innerHTML='';states[current]=states[current]||{};
  items().forEach((it,i)=>{
-  const s=states[current][i]||{};
+  const s=states[current][i]||{}; const isActivity=it.kind==='activity'; const ak=activityKey(i); const at=activityTimers[ak]||{};
   const card=document.createElement('div');card.className='card';
   card.innerHTML=`<div class="card-title"><div><strong>${it.name}</strong><div class="planned">Planejado: ${it.sets} • ${loadText(it)||'-'}</div>${it.note?`<div class="mini">${it.note}</div>`:''}</div><label class="check"><input class="done" type="checkbox" ${s.done?'checked':''}> Feito</label></div>
-  <div class="row" style="margin-top:10px"><div><label class="small">${it.kind==='activity'?'Duração':'Séries/reps'}</label><input class="sets" type="text" value="${s.sets??it.sets}"></div><div><label class="small">Carga</label><input class="load" type="text" value="${s.load??it.load}"></div></div>
+  ${isActivity?`<div class="row" style="margin-top:10px"><button class="activityStart primary" ${at.started&&!at.ended?'disabled':''}>▶ INICIAR ${it.name.toUpperCase()}</button><button class="activityStop" ${!at.started||at.ended?'disabled':''}>■ ENCERRAR</button></div><div class="status activityTime">${at.started?(at.ended?`Início: ${hhmm(new Date(at.started))} • Término: ${hhmm(new Date(at.ended))} • ${fmtDurationSec(activityElapsed(i))}`:`Em andamento desde ${hhmm(new Date(at.started))} • ${fmtDurationSec(activityElapsed(i))}`):'Cronômetro separado da musculação.'}</div>`:''}
+  <div class="row" style="margin-top:10px"><div><label class="small">${isActivity?'Duração':'Séries/reps'}</label><input class="sets" type="text" value="${s.sets??(at.ended?fmtDurationSec(activityElapsed(i)):it.sets)}"></div><div><label class="small">Carga</label><input class="load" type="text" value="${s.load??it.load}"></div></div>
   <div class="mini" style="margin-top:10px;font-weight:700">Esforço</div><div class="effort-grid effort" style="margin-top:6px"></div>
   <div class="mini" style="margin-top:10px;font-weight:700">Dor/desconforto</div><div class="pain-grid pain" style="margin-top:6px"><button data-v="Não" class="${s.pain==='Não'?'active':''}">Não</button><button data-v="Sim" class="${s.pain==='Sim'?'active':''}">Sim</button></div>
   <textarea class="note" style="margin-top:10px" placeholder="Observação opcional">${s.note||''}</textarea>`;
@@ -224,18 +244,38 @@ function render(){
   function persist(){states[current][i]={done:card.querySelector('.done').checked,sets:card.querySelector('.sets').value.trim(),load:card.querySelector('.load').value.trim(),effort:card.querySelector('.effort .active')?.dataset.v||'',pain:card.querySelector('.pain .active')?.dataset.v||'',note:card.querySelector('.note').value.trim()};save();updateProgress()}
   card.oninput=persist;card.onchange=persist;eff.onclick=e=>{const b=e.target.closest('button');if(!b)return;[...eff.children].forEach(x=>x.classList.remove('active'));b.classList.add('active');persist()};
   card.querySelector('.pain').onclick=e=>{const b=e.target.closest('button');if(!b)return;[...card.querySelector('.pain').children].forEach(x=>x.classList.remove('active'));b.classList.add('active');persist()};
+  if(isActivity){
+   card.querySelector('.activityStart').onclick=()=>{if(activityTimers[ak]?.started&&!activityTimers[ak]?.ended)return;activityTimers[ak]={started:new Date().toISOString(),ended:null};save();render()};
+   card.querySelector('.activityStop').onclick=()=>{const t=activityTimers[ak];if(!t?.started||t.ended)return;t.ended=new Date().toISOString();const sec=activityElapsed(i);const prev=states[current][i]||{};states[current][i]={...prev,done:true,sets:fmtDurationSec(sec),load:prev.load??it.load};save();render()};
+  }
   list.appendChild(card)
  }); updateProgress()
 }
-$('#generalNotes').value=meta.notes||'';scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);render();setReportState();
-$$('.tab').forEach(b=>b.onclick=()=>{if(started&&!ended){alert('Encerre o treino atual antes de trocar de ficha.');return}current=b.dataset.key;started=null;ended=null;disposition=null;overallRpe=null;clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar.';$('#reportWrap').hidden=true;setReportState();save();render()});
-$('#start').onclick=()=>{started=new Date();ended=null;$('#start').disabled=true;$('#stop').disabled=false;$('#timeInfo').textContent=`Início: ${hhmm(started)}`;setReportState();showTimer();ticker=setInterval(showTimer,1000)};
-function finish(){ended=new Date();clearInterval(ticker);ticker=null;$('#stop').disabled=true;showTimer();$('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`;setReportState()}
-$('#stop').onclick=()=>{if(!started||ended)return;const pending=items().map((e,i)=>({name:e.name,done:!!states[current]?.[i]?.done})).filter(x=>!x.done);if(pending.length){const ok=confirm(`Os seguintes itens não foram marcados como Feito:\n\n${pending.map(x=>'• '+x.name).join('\n')}\n\nDeseja encerrar mesmo assim?`);if(!ok)return}finish()};
-$('#clearBtn').onclick=()=>{if(!confirm('Limpar apenas os registros do treino '+current+'?'))return;states[current]={};started=null;ended=null;disposition=null;overallRpe=null;clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');if(ticker)clearInterval(ticker);$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar.';$('#reportWrap').hidden=true;save();render();setReportState()};
+function resetCurrentFormAfterReport(){
+ states[current]={}; disposition=null; overallRpe=null; started=null; ended=null;
+ Object.keys(activityTimers).filter(k=>k.startsWith(current+':')).forEach(k=>delete activityTimers[k]);
+ $('#generalNotes').value='';clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');
+ if(ticker){clearInterval(ticker);ticker=null} $('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar novo treino.';save();render();setReportState();
+}
+$('#generalNotes').value=meta.notes||'';scoreGrid('#dispGrid','#dispOut',v=>disposition=v,disposition);scoreGrid('#rpeGrid','#rpeOut',v=>overallRpe=v,overallRpe);render();setReportState();renderWorkoutHistory();
+if(started){showTimer();$('#start').disabled=true;$('#stop').disabled=!!ended;if(ended){$('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min`}else{$('#timeInfo').textContent=`Treino em andamento desde ${hhmm(started)}`;ticker=setInterval(()=>{showTimer();render()},1000)}}
+$$('.tab').forEach(b=>b.onclick=()=>{if(started&&!ended){alert('Encerre a musculação atual antes de trocar de ficha.');return}current=b.dataset.key;started=null;ended=null;disposition=null;overallRpe=null;$('#generalNotes').value='';clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar.';$('#reportWrap').hidden=true;setReportState();save();render()});
+$('#start').onclick=()=>{started=new Date();ended=null;$('#start').disabled=true;$('#stop').disabled=false;$('#timeInfo').textContent=`Início: ${hhmm(started)}`;setReportState();showTimer();save();ticker=setInterval(showTimer,1000)};
+function finish(){ended=new Date();clearInterval(ticker);ticker=null;$('#stop').disabled=true;showTimer();$('#timeInfo').textContent=`Início: ${hhmm(started)} • Término: ${hhmm(ended)} • ${Math.round(elapsed()/60)} min de musculação`;setReportState();save()}
+$('#stop').onclick=()=>{if(!started||ended)return;const pending=items().map((e,i)=>({name:e.name,kind:e.kind,done:!!states[current]?.[i]?.done})).filter(x=>x.kind!=='activity'&&!x.done);if(pending.length){const ok=confirm(`Os seguintes exercícios de musculação não foram marcados como Feito:\n\n${pending.map(x=>'• '+x.name).join('\n')}\n\nDeseja encerrar a musculação mesmo assim?`);if(!ok)return}finish()};
+$('#clearBtn').onclick=()=>{if(!confirm('Limpar apenas os registros do treino '+current+'? O histórico já salvo não será apagado.'))return;states[current]={};started=null;ended=null;disposition=null;overallRpe=null;Object.keys(activityTimers).filter(k=>k.startsWith(current+':')).forEach(k=>delete activityTimers[k]);$('#generalNotes').value='';clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');if(ticker)clearInterval(ticker);ticker=null;$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Pronto para iniciar.';$('#reportWrap').hidden=true;save();render();setReportState()};
 $('#generalNotes').oninput=save;
-$('#reportBtn').onclick=()=>{if(!ended)return;const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';const lines=[`*_${day} (Treino ${current})_*`,''];if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);lines.push(`Início treino ${hhmm(started)}`,'');items().forEach((it,i)=>{const s=states[current][i]||{};lines.push(`*${it.name}*`);if(!s.done){lines.push('Status: Não realizado','');return}lines.push(`${it.kind==='activity'?'Duração':'Série'}: ${s.sets||it.sets}`);lines.push(`Carga: ${s.load||it.load||'não informado'}`);lines.push(`Esforço: ${s.effort||'não informado'}`);lines.push(`Dor/desconforto: ${s.pain||'não informado'}`);if(s.note)lines.push(`Observação: ${s.note}`);lines.push('')});lines.push(`Término: ${hhmm(ended)}`,`Duração total: ${Math.round(elapsed()/60)}min`);if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);const gn=$('#generalNotes').value.trim();if(gn)lines.push(`Observação geral: ${gn}`);$('#reportText').textContent=lines.join('\n');$('#reportWrap').hidden=false;$('#reportWrap').scrollIntoView({behavior:'smooth'})};
-$('#copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText($('#reportText').textContent);$('#copyStatus').textContent='Relatório copiado.'}catch(e){$('#copyStatus').textContent='Copie o texto manualmente.'}};
+function buildWorkoutReport(){
+ const day=current==='A'?'Segunda-Feira':current==='B'?'Quarta-Feira':'Sexta-Feira';const lines=[`*_${day} (Treino ${current})_*`,''];
+ lines.push(`Data: ${ddmmyyyy(started)}`);if(disposition)lines.push(`Disposição antes do treino: ${disposition}/10`);lines.push(`Início treino ${hhmm(started)}`,'');
+ items().forEach((it,i)=>{const s=states[current][i]||{};lines.push(`*${it.name}*`);if(!s.done){lines.push('Status: Não realizado','');return}lines.push(`${it.kind==='activity'?'Duração':'Série'}: ${s.sets||it.sets}`);lines.push(`Carga: ${s.load||it.load||'não informado'}`);lines.push(`Esforço: ${s.effort||'não informado'}`);lines.push(`Dor/desconforto: ${s.pain||'não informado'}`);if(s.note)lines.push(`Observação: ${s.note}`);lines.push('')});
+ lines.push(`Término musculação: ${hhmm(ended)}`,`Duração musculação: ${Math.round(elapsed()/60)}min`);
+ const extraSecs=items().reduce((sum,it,i)=>sum+(it.kind==='activity'&&activityTimers[activityKey(i)]?.ended?activityElapsed(i):0),0);
+ if(extraSecs)lines.push(`Duração atividades extras: ${Math.round(extraSecs/60)}min`,`Tempo total de atividades: ${Math.round(elapsed()/60)+Math.round(extraSecs/60)}min`);
+ if(overallRpe)lines.push(`Esforço geral: ${overallRpe}/10`);const gn=$('#generalNotes').value.trim();if(gn)lines.push(`Observação geral: ${gn}`);return {text:lines.join('\n'),extraSecs}
+}
+$('#reportBtn').onclick=()=>{if(!ended)return;const built=buildWorkoutReport();const text=built.text;const rec={id:Date.now(),date:ddmmyyyy(started),workout:current,muscleDuration:`${Math.round(elapsed()/60)} min`,extraDuration:built.extraSecs?`${Math.round(built.extraSecs/60)} min`:'',text};workoutHistory.push(rec);saveWorkoutHistory();$('#reportText').textContent=text;$('#reportWrap').hidden=false;$('#copyStatus').textContent='Relatório salvo no histórico.';renderWorkoutHistory();resetCurrentFormAfterReport();$('#reportWrap').hidden=false;$('#reportText').textContent=text;$('#copyStatus').textContent='Relatório salvo no histórico. Formulário limpo para o próximo treino.';$('#reportWrap').scrollIntoView({behavior:'smooth'})};
+$('#copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText($('#reportText').textContent);$('#copyStatus').textContent='Relatório copiado.'}catch(e){const ta=document.createElement('textarea');ta.value=$('#reportText').textContent;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();$('#copyStatus').textContent='Relatório copiado.'}};
 
 function decodeCompatiblePdf(buffer){
  const bytes=new Uint8Array(buffer); let raw=''; const chunk=0x8000;
@@ -249,7 +289,7 @@ function decodeCompatiblePdf(buffer){
 }
 $('#pdfInput').onchange=e=>{selectedFile=e.target.files?.[0]||null;pendingPlan=null;$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#importBtn').disabled=!selectedFile;$('#pdfStatus').textContent=selectedFile?`Arquivo selecionado: ${selectedFile.name}. Toque em IMPORTAR FICHA para validar.`:''};
 $('#importBtn').onclick=async()=>{if(!selectedFile)return;$('#pdfStatus').textContent='Validando ficha...';try{pendingPlan=decodeCompatiblePdf(await selectedFile.arrayBuffer());const a=pendingPlan.workouts.A.items.length,b=pendingPlan.workouts.B.items.length,c=pendingPlan.workouts.C.items.length;$('#preview').innerHTML=`<strong>Prévia da nova ficha</strong><br>Treino A: ${a} itens<br>Treino B: ${b} itens<br>Treino C: ${c} itens<br><br><span class="mini">A ficha atual só será substituída depois da confirmação abaixo.</span>`;$('#preview').hidden=false;$('#confirmImportBtn').hidden=false;$('#pdfStatus').textContent='Ficha reconhecida com sucesso.'}catch(err){pendingPlan=null;$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent=err.message+' A ficha atual foi mantida.'}};
-$('#confirmImportBtn').onclick=()=>{if(!pendingPlan)return;const ok=confirm('Confirmar esta nova ficha? Os registros preenchidos do treino atual serão limpos, mas a nova ficha só entra após esta confirmação.');if(!ok)return;workouts=pendingPlan.workouts;states={A:{},B:{},C:{}};current='A';disposition=null;overallRpe=null;clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');localStorage.setItem('rt_workouts',JSON.stringify(workouts));save();started=null;ended=null;$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Nova ficha importada com sucesso.';$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent='Nova ficha ativa.';render();setReportState()};
+$('#confirmImportBtn').onclick=()=>{if(!pendingPlan)return;const ok=confirm('Confirmar esta nova ficha? A ficha atual será substituída. O histórico de relatórios já salvos será preservado.');if(!ok)return;workouts=pendingPlan.workouts;states={A:{},B:{},C:{}};current='A';disposition=null;overallRpe=null;started=null;ended=null;activityTimers={};$('#generalNotes').value='';clearScoreGrid('#dispGrid','#dispOut');clearScoreGrid('#rpeGrid','#rpeOut');localStorage.setItem('rt_workouts',JSON.stringify(workouts));save();$('#timer').textContent='00:00:00';$('#start').disabled=false;$('#stop').disabled=true;$('#timeInfo').textContent='Nova ficha importada com sucesso. Histórico preservado.';$('#preview').hidden=true;$('#confirmImportBtn').hidden=true;$('#pdfStatus').textContent='Nova ficha ativa.';render();setReportState();renderWorkoutHistory()};
 
 
 const kravHistoryData=JSON.parse(localStorage.getItem('rt_krav_history')||'[]');
