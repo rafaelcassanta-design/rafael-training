@@ -148,7 +148,7 @@ select{font:inherit}
 </div>
 
 <div id="evaluationArea" class="hidden">
-  <div class="card">
+  <div class="card" hidden aria-hidden="true">
     <div class="section-title" style="margin-top:0">Nova avaliação corporal</div>
     <p class="mini">Cada consulta fica salva separadamente para comparação futura. Os dados ficam neste aparelho.</p>
     <div class="eval-grid">
@@ -180,6 +180,9 @@ select{font:inherit}
     <div id="pdfEvalStatus" class="status" aria-live="polite"></div>
     <div id="pdfEvalResult" class="compare" hidden></div>
     <button id="pdfEvalSave" style="width:100%;margin-top:10px" hidden>SALVAR AVALIAÇÕES CONFERIDAS</button>
+    <button id="pdfEvalCopy" style="width:100%;margin-top:10px" hidden>COPIAR RELATÓRIO PARA O CHAT</button>
+    <button id="pdfEvalDownload" style="width:100%;margin-top:8px" hidden>SALVAR RELATÓRIO EM TXT</button>
+    <div id="pdfEvalCopyStatus" class="status" aria-live="polite"></div>
   </div>
 
   <div class="card">
@@ -189,6 +192,9 @@ select{font:inherit}
       <div><label class="small">Mais recente</label><select id="compareNew" style="width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:8px"></select></div>
     </div>
     <button id="compareBtn" style="width:100%;margin-top:10px">COMPARAR</button>
+    <button id="savedEvalCopy" style="width:100%;margin-top:10px" disabled>COPIAR RELATÓRIO SALVO</button>
+    <button id="savedEvalDownload" style="width:100%;margin-top:8px" disabled>SALVAR RELATÓRIO EM TXT</button>
+    <div id="savedEvalCopyStatus" class="status" aria-live="polite"></div>
     <div id="compareOut" class="compare">Cadastre pelo menos duas avaliações para comparar.</div>
   </div>
 
@@ -482,8 +488,10 @@ function diff(a,b,unit=''){
   const d=y-x;return `${d>0?'+':''}${d.toFixed(1).replace('.',',')}${unit}`;
 }
 $('#compareBtn').onclick=()=>{
+ currentSavedReportText='';$('#savedEvalCopy').disabled=true;$('#savedEvalDownload').disabled=true;
   const a=evaluations.find(x=>x.id==$('#compareOld').value),b=evaluations.find(x=>x.id==$('#compareNew').value);
   if(!a||!b||a.id===b.id){$('#compareOut').textContent='Selecione duas avaliações diferentes.';return}
+ currentSavedReportText=reportFromRecords(a,b,true);$('#savedEvalCopy').disabled=false;$('#savedEvalDownload').disabled=false;
   $('#compareOut').innerHTML=`<strong>${fmtDate(a.date)} → ${fmtDate(b.date)}</strong><br>
   Peso: ${diff(a.weight,b.weight,' kg')}<br>Gordura corporal: ${diff(a.fat,b.fat,' p.p.')}<br>Massa muscular: ${((a.notes||'').match(/Unidades de massa muscular: ([^ ]+)/)||[])[1]&&((b.notes||'').match(/Unidades de massa muscular: ([^ ]+)/)||[])[1]&&((a.notes||'').match(/Unidades de massa muscular: ([^ ]+)/)||[])[1]!==((b.notes||'').match(/Unidades de massa muscular: ([^ ]+)/)||[])[1]?'unidades diferentes':diff(a.muscle,b.muscle,'')}<br>
   Cintura: ${diff(a.waist,b.waist,' cm')} | Abdômen: ${diff(a.abdomen,b.abdomen,' cm')} | Quadril: ${diff(a.hip,b.hip,' cm')}<br>
@@ -506,6 +514,48 @@ const pdfMetrics=[
  ['subscapFold','Prega subescapular','mm',/^Subescapular\b/i],['thighFold','Prega coxa','mm',/^Coxa\s+(?!direita|esquerda)\d/i]
 ];
 let pendingPdfEvaluations=null;
+let currentPdfReportText='';
+let currentSavedReportText='';
+function metricStored(rec,key){
+ const direct={weight:'weight',fat:'fat',lean:'lean',fatKg:'fatKg',waist:'waist',abdomen:'abdomen',hip:'hip',thighR:'thighR',armR:'armR'};
+ const v=(rec?.pdfMetrics?.[key]??rec?.[direct[key]]);
+ if(v===undefined||v===null||v==='')return null;
+ const n=Number(String(v).replace(',','.'));return Number.isFinite(n)?n:null;
+}
+function reportFromRecords(a,b,fromStored=false){
+ const get=(r,k)=>fromStored?metricStored(r,k):valueAt(r,k);
+ const lines=['*RELATÓRIO COMPARATIVO — AVALIAÇÃO CORPORAL*',`Período: ${fmtDate(a.date)} → ${fmtDate(b.date)}`,''];
+ for(const [key,label,unit] of pdfMetrics){
+  const av=get(a,key),bv=get(b,key);
+  if(av==null&&bv==null)continue;
+  const suffix=unit?` ${unit}`:'';
+  let delta='não disponível';
+  if(av!=null&&bv!=null){const n=bv-av;delta=`${n>0?'+':''}${displayNum(n)}${suffix}`;}
+  const differenceUnit=key==='fat'||key==='fatPct'?' p.p.':suffix;
+  if(av!=null&&bv!=null){const n=bv-av;delta=`${n>0?'+':''}${displayNum(n)}${differenceUnit}`;}
+  lines.push(`${label}: ${displayNum(av)}${suffix} → ${displayNum(bv)}${suffix} | Variação: ${delta}`);
+ }
+ lines.push('','Fonte: avaliações antropométricas importadas no Rafael Training.','Massa magra não equivale à massa muscular isolada.','Conferir valores com os PDFs originais antes de tomar decisões.');
+ return lines.join('\n');
+}
+async function copyEvalText(value,status){
+ if(!value){$(status).textContent='Gere ou selecione uma comparação primeiro.';return}
+ try{await navigator.clipboard.writeText(value)}catch(e){
+  const ta=document.createElement('textarea');ta.value=value;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();const ok=document.execCommand('copy');ta.remove();if(!ok){$(status).textContent='Não foi possível copiar automaticamente.';return}
+ }
+ $(status).textContent='Relatório copiado! Cole no chat.';
+}
+function downloadEvalText(value,status){
+ if(!value){$(status).textContent='Gere ou selecione uma comparação primeiro.';return}
+ const blob=new Blob([value],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='Rafael_Training_Comparativo_Corporal.txt';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+ $(status).textContent='Arquivo TXT preparado.';
+}
+$('#pdfEvalCopy').onclick=()=>copyEvalText(currentPdfReportText,'#pdfEvalCopyStatus');
+$('#pdfEvalDownload').onclick=()=>downloadEvalText(currentPdfReportText,'#pdfEvalCopyStatus');
+$('#savedEvalCopy').onclick=()=>copyEvalText(currentSavedReportText,'#savedEvalCopyStatus');
+$('#savedEvalDownload').onclick=()=>downloadEvalText(currentSavedReportText,'#savedEvalCopyStatus');
+
 const asNum=v=>Number(String(v).replace(',','.'));
 const displayNum=v=>v==null?'—':Number(v).toFixed(2).replace('.',',');
 const dateIso=d=>{const m=d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:null};
@@ -567,7 +617,7 @@ function valueAt(r,key){return r?.values?.[key]??null}
 function diffPdf(a,b){if(a==null||b==null)return '—';const d=b-a;return (d>0?'+':'')+displayNum(d)}
 $('#pdfEvalAnalyze').onclick=async()=>{
  const old=$('#pdfEvalOld').files?.[0],recent=$('#pdfEvalNew').files?.[0];
- pendingPdfEvaluations=null;$('#pdfEvalSave').hidden=true;$('#pdfEvalResult').hidden=true;
+ pendingPdfEvaluations=null;currentPdfReportText='';$('#pdfEvalSave').hidden=true;$('#pdfEvalCopy').hidden=true;$('#pdfEvalDownload').hidden=true;$('#pdfEvalResult').hidden=true;$('#pdfEvalCopyStatus').textContent='';
  if(!old||!recent){$('#pdfEvalStatus').textContent='Selecione os dois PDFs.';return}
  $('#pdfEvalAnalyze').disabled=true;$('#pdfEvalStatus').textContent='Lendo os PDFs. Aguarde...';
  try{
@@ -579,6 +629,7 @@ $('#pdfEvalAnalyze').onclick=async()=>{
    const existing=byDate.get(record.date);
    if(!existing){byDate.set(record.date,{...record,values:{...record.values}});continue}
    for(const [k,v] of Object.entries(record.values)){
+    if(k==='thighFold' && newParsed.isComparative && record.source===recent.name && v!==null){existing.values[k]=v;continue}
     if(existing.values[k]===undefined || existing.values[k]===null)existing.values[k]=v;
     else if(v!==null&&Math.abs(existing.values[k]-v)>0.011){
      // Relatório comparativo traz a prega da coxa em coluna inequívoca.
@@ -594,7 +645,7 @@ $('#pdfEvalAnalyze').onclick=async()=>{
   const [a,b]=[records[0],records[records.length-1]];
   const core=['weight','fat','lean','waist','abdomen','hip','thighR','thighFold'];
   if(core.some(k=>valueAt(a,k)===null||valueAt(b,k)===null))throw Error('Uma ou mais medidas essenciais não foram identificadas com segurança. Nenhum dado foi salvo.');
-  pendingPdfEvaluations=[a,b];
+  pendingPdfEvaluations=[a,b];currentPdfReportText=reportFromRecords(a,b);$('#pdfEvalCopy').hidden=false;$('#pdfEvalDownload').hidden=false;
   const rows=pdfMetrics.map(([key,label,unit])=>`<tr><td style="padding:6px">${esc(label)}</td><td>${displayNum(valueAt(a,key))}</td><td>${displayNum(valueAt(b,key))}</td><td>${diffPdf(valueAt(a,key),valueAt(b,key))} ${unit}</td></tr>`).join('');
   $('#pdfEvalResult').innerHTML=`<strong>Prévia para conferência</strong><p class="mini">${fmtDate(a.date)} → ${fmtDate(b.date)}. Massa magra não é sinônimo de massa muscular isolada. Confira os valores antes de salvar.</p><div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th>Medida</th><th>Anterior</th><th>Nova</th><th>Variação</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   $('#pdfEvalResult').hidden=false;$('#pdfEvalSave').hidden=false;
