@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17365D">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Rafael Training Beta 2.0</title>
+<title>Rafael Training Beta 2.2</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -40,7 +40,7 @@ select{font:inherit}
 <body>
 <div class="app">
 <div class="top">
-  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 2.0</div></div>
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 2.2</div></div>
   <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
 </div>
 <div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
@@ -428,6 +428,7 @@ $('#evalDate').addEventListener('input',clearEvalError);
 $('#saveEval').onclick=()=>{
   if(!evVal('#evalDate')){showEvalError('Falta preencher a DATA DA AVALIAÇÃO antes de salvar.');return}
   clearEvalError();
+  if(!['#evalWeight','#evalFat','#evalMuscle','#evalWaist','#evalAbdomen','#evalHip','#evalThighR','#evalThighL','#evalArmR','#evalArmL'].some(id=>evVal(id))){showEvalError('Informe ao menos uma medida antes de salvar.');return}
   evaluations.push({
     id:Date.now(),date:evVal('#evalDate'),weight:evVal('#evalWeight'),fat:evVal('#evalFat'),muscle:evVal('#evalMuscle'),
     waist:evVal('#evalWaist'),abdomen:evVal('#evalAbdomen'),hip:evVal('#evalHip'),
@@ -444,7 +445,7 @@ function renderEvaluations(){
   if(!evaluations.length) hist.innerHTML='<div class="card mini">Nenhuma avaliação cadastrada ainda.</div>';
   evaluations.slice().reverse().forEach(r=>{
     const c=document.createElement('div');c.className='eval-card';
-    c.innerHTML=`<div class="card-title"><div><strong>${fmtDate(r.date)}</strong><div class="mini">Peso: ${esc(r.weight)||'—'} | Gordura: ${esc(r.fat)||'—'} | Massa muscular: ${esc(r.muscle)||'—'}</div></div><button data-del="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div>
+    c.innerHTML=`<div class="card-title"><div><strong>${fmtDate(r.date)}</strong><div class="mini">Peso: ${esc(r.weight)||'—'} | Gordura: ${esc(r.fat)||'—'} | Massa muscular: ${esc(r.muscle)||'—'} | Massa magra: ${esc(r.lean)||'—'}</div></div><button data-del="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div>
     <div class="mini" style="margin-top:6px">Cintura ${esc(r.waist)||'—'} | Abdômen ${esc(r.abdomen)||'—'} | Quadril ${esc(r.hip)||'—'}</div>
     <div class="mini">Coxa D/E ${esc(r.thighR)||'—'} / ${esc(r.thighL)||'—'} | Braço D/E ${esc(r.armR)||'—'} / ${esc(r.armL)||'—'}</div>
     ${r.goal?`<div style="margin-top:8px"><strong>Objetivo:</strong> ${esc(r.goal)}</div>`:''}
@@ -488,82 +489,121 @@ $('#compareBtn').onclick=()=>{
   Coxa D/E: ${diff(a.thighR,b.thighR,' cm')} / ${diff(a.thighL,b.thighL,' cm')}<br>
   Braço D/E: ${diff(a.armR,b.armR,' cm')} / ${diff(a.armL,b.armL,' cm')}`;
 };
-// Leitura local de avaliações em PDF; não transmite os documentos a um servidor.
-const pdfMetricDefs=[
- ['weight','Peso','kg',[/\bpeso\s*(?:corporal)?\s*(?:\(kg\))?\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:kg)?\b/i]],
- ['fat','Gordura corporal','%',[/\b(?:percentual|porcentagem|percentagem)\s+de\s+gordura\s*[:\-]?\s*(\d{1,2}(?:[,.]\d{1,2})?)\s*%?/i,/\b(?:gordura\s+corporal|massa\s+gorda)\s*\(%\)\s*[:\-]?\s*(\d{1,2}(?:[,.]\d{1,2})?)/i,/\b(?:gordura\s+corporal|massa\s+gorda)\s*[:\-]?\s*(\d{1,2}(?:[,.]\d{1,2})?)\s*%/i]],
- ['muscle','Massa muscular','kg',[/\b(?:massa\s+muscular|musculatura\s+esquel[eé]tica)\s*(?:\(kg\))?\s*[:\-]?\s*(\d{1,3}(?:[,.]\d{1,2})?)\s*(kg|%)/i,/\b(?:massa\s+muscular|musculatura\s+esquel[eé]tica)\s*\(kg\)\s*[:\-]?\s*(\d{1,3}(?:[,.]\d{1,2})?)/i]],
- ['waist','Cintura','cm',[/\bcintura\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]],
- ['abdomen','Abdômen','cm',[/\babd[oô]m(?:en|e)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]],
- ['hip','Quadril','cm',[/\bquadril\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]],
- ['thighR','Coxa direita','cm',[/\bcoxa\s*(?:direita|dir\.?|d\b)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]],
- ['thighL','Coxa esquerda','cm',[/\bcoxa\s*(?:esquerda|esq\.?|e\b)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]],
- ['armR','Braço direito','cm',[/\bbra[cç]o\s*(?:direito|dir\.?|d\b)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]],
- ['armL','Braço esquerdo','cm',[/\bbra[cç]o\s*(?:esquerdo|esq\.?|e\b)\s*[:\-]?\s*(\d{2,3}(?:[,.]\d{1,2})?)\s*(?:cm)?/i]]
+// Leitura de PDFs antropométricos. Cada registro representa uma DATA, não um arquivo.
+const pdfMetrics=[
+ ['weight','Peso','kg',/^Peso\b/i],['fat','Gordura corporal','%',/^%\s*Massa Gorda\b/i],
+ ['lean','Massa magra','kg',/^Massa Magra\b/i],['fatKg','Massa gorda','kg',/^Massa Gorda\b/i],
+ ['waist','Cintura','cm',/^Cintura\b/i],['abdomen','Abdômen','cm',/^Abd[oô]men\b/i],
+ ['hip','Quadril','cm',/^Quadril\b/i],['thighR','Coxa direita','cm',/^Coxa direita\b/i],
+ ['armR','Braço relaxado direito','cm',/^Bra[cç]o relaxado direito\b/i],
+ ['neck','Pescoço','cm',/^Pesco[cç]o\b/i],['imc','IMC','',/^IMC\b/i],
+ ['fatPct','% Massa magra','%',/^%\s*Massa Magra\b/i],
+ ['skinfolds','Soma de dobras','mm',/^Soma de dobras\b/i],
+ ['bicepsFold','Prega bíceps','mm',/^B[ií]ceps\b/i],['tricepsFold','Prega tríceps','mm',/^Tr[ií]ceps\b/i],
+ ['axillaryFold','Prega axilar média','mm',/^Axilar M[eé]dia\b/i],['chestFold','Prega tórax','mm',/^T[oó]rax\b/i],
+ ['abdominalFold','Prega abdominal','mm',/^Abdominal\b/i],['supraFold','Prega suprailíaca','mm',/^Suprail[ií]aca\b/i],
+ ['subscapFold','Prega subescapular','mm',/^Subescapular\b/i],['thighFold','Prega coxa','mm',/^Coxa\s+(?!direita|esquerda)\d/i]
 ];
 let pendingPdfEvaluations=null;
-async function extractEvaluationPDF(file){
- if(!file||file.type!=='application/pdf')throw Error('Selecione dois arquivos PDF.');
- if(file.size>20*1024*1024)throw Error('O PDF '+file.name+' ultrapassa 20 MB.');
- const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');
- const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),disableWorker:true}).promise;
- let lines=[];
- for(let i=1;i<=Math.min(pdf.numPages,25);i++){
-  const page=await pdf.getPage(i),content=await page.getTextContent();
-  // Agrupa texto por linha para reduzir associações indevidas entre colunas.
-  const groups=new Map();
-  for(const item of content.items){const y=Math.round((item.transform?.[5]||0)/4)*4;const arr=groups.get(y)||[];arr.push({x:item.transform?.[4]||0,text:item.str||''});groups.set(y,arr)}
-  for(const arr of groups.values())lines.push(arr.sort((a,b)=>a.x-b.x).map(v=>v.text).join(' ').replace(/\s+/g,' ').trim());
- }
- const text=lines.join('\n');
- if(text.replace(/\s/g,'').length<35)throw Error('Este PDF parece digitalizado como imagem ou não contém texto legível. É necessário OCR; nenhum valor será inventado.');
- const data={};let count=0;
- for(const [key,label,unit,patterns] of pdfMetricDefs){
-  const found=[];
-  for(const line of lines){for(const re of patterns){const m=line.match(re);if(m){const v=Number(m[1].replace(',','.'));if(Number.isFinite(v))found.push({v,unit:key==='muscle'?(m[2]||'kg'):unit});break}}}
-  const distinct=[...new Set(found.map(x=>x.v+'|'+x.unit))];
-  if(distinct.length===1){data[key]=String(found[0].v).replace('.',',');data[key+'Unit']=found[0].unit;count++}
-  else if(distinct.length>1)data[key+'Warning']='Valores conflitantes no PDF';
- }
- const dm=text.match(/\b(?:data\s+da\s+avalia[cç][aã]o|avalia[cç][aã]o\s+em)\s*[:\-]?\s*(\d{2})\/(\d{2})\/(\d{4})/i);
- if(dm)data.date=`${dm[3]}-${dm[2]}-${dm[1]}`;
- return {data,count,name:file.name};
+const asNum=v=>Number(String(v).replace(',','.'));
+const displayNum=v=>v==null?'—':Number(v).toFixed(2).replace('.',',');
+const dateIso=d=>{const m=d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:null};
+async function pdfJsLibrary(){
+ // Carregamento com worker EXPLÍCITO: evita o erro de fake worker da versão anterior.
+ const urls=[
+  ['https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs','https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs'],
+  ['https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.mjs','https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.mjs']
+ ];
+ let last;
+ for(const [moduleUrl,workerUrl] of urls){try{const lib=await import(moduleUrl);lib.GlobalWorkerOptions.workerSrc=workerUrl;return lib}catch(e){last=e}}
+ throw Error('Não foi possível carregar o leitor de PDF. Verifique a conexão de internet e tente novamente. '+(last?.message||''));
 }
-function pdfRow(e,side){return `<td>${e.data[side]!==undefined?esc(e.data[side])+' '+esc(e.data[side+'Unit']||''):e.data[side+'Warning']?'⚠️ Conferir':'Não identificado'}</td>`}
-$('#pdfEvalAnalyze').onclick=async()=>{
- const a=$('#pdfEvalOld').files?.[0],b=$('#pdfEvalNew').files?.[0];
- pendingPdfEvaluations=null;$('#pdfEvalSave').hidden=true;$('#pdfEvalResult').hidden=true;
- if(!a||!b){$('#pdfEvalStatus').textContent='Selecione os dois PDFs.';return}
- $('#pdfEvalAnalyze').disabled=true;$('#pdfEvalStatus').textContent='Lendo os documentos localmente...';
- try{
-  const [oldEval,newEval]=await Promise.all([extractEvaluationPDF(a),extractEvaluationPDF(b)]);
-  if(!oldEval.count&&!newEval.count)throw Error('Nenhuma medida reconhecida. Verifique se os PDFs usam texto selecionável e rótulos compatíveis.');
-  pendingPdfEvaluations=[oldEval,newEval];
-  let rows='';
-  for(const [key,label,unit] of pdfMetricDefs){
-   const av=oldEval.data[key],bv=newEval.data[key];
-   const sameUnit=(oldEval.data[key+'Unit']||unit)===(newEval.data[key+'Unit']||unit);
-   const delta=av!==undefined&&bv!==undefined&&sameUnit?diff(av,bv,' '+(oldEval.data[key+'Unit']||unit)):'—';
-   rows+=`<tr><td style="padding:6px">${esc(label)}</td>${pdfRow(oldEval,key)}${pdfRow(newEval,key)}<td>${esc(delta)}</td></tr>`;
+async function readPdfLines(file,lib){
+ if(!file||!(/\.pdf$/i.test(file.name)))throw Error('Selecione um PDF válido.');
+ if(file.size>20*1024*1024)throw Error('PDF maior que 20 MB.');
+ let doc;
+ try{doc=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise}catch(e){throw Error('Falha ao abrir '+file.name+': '+e.message)}
+ const lines=[];
+ for(let p=1;p<=Math.min(doc.numPages,20);p++){
+  const content=await (await doc.getPage(p)).getTextContent();const groups=new Map();
+  for(const item of content.items){if(!item.str?.trim())continue;const y=Math.round(item.transform[5]/3)*3;const g=groups.get(y)||[];g.push({x:item.transform[4],text:item.str});groups.set(y,g)}
+  for(const [y,arr] of groups)lines.push({page:p,y,text:arr.sort((x,z)=>x.x-z.x).map(v=>v.text).join(' ').replace(/\s+/g,' ').trim()});
+ }
+ if(lines.map(x=>x.text).join('').length<40)throw Error('PDF sem texto selecionável. Este formato precisaria de OCR.');
+ return lines;
+}
+function findDates(lines){return [...new Set(lines.flatMap(x=>x.text.match(/\b\d{2}\/\d{2}\/20\d{2}\b/g)||[]))].map(dateIso).filter(Boolean).sort()}
+function parseReport(lines,file){
+ const full=lines.map(x=>x.text).join('\n');const isComparative=/Relat[oó]rio Comparativo Antropom[eé]trico/i.test(full);
+ const dates=findDates(lines);const useDates=isComparative?dates.slice(0,2):dates.slice(0,1);
+ if(useDates.length!==(isComparative?2:1))throw Error('Não identifiquei as datas no PDF '+file.name);
+ const results=useDates.map(date=>({date,values:{},source:file.name}));
+ const valRe=/\b\d{1,3}(?:\.\d{3})*,\d{1,2}\b|\b\d{1,3}\.\d{1,2}\b/g;
+ for(const {text:line} of lines){
+  for(const [key,label,unit,re] of pdfMetrics){
+   const m=line.match(re);if(!m)continue;
+   const after=line.slice(m[0].length);const nums=(after.match(valRe)||[]).map(asNum);
+   if(nums.length<(isComparative?2:1))continue;
+   // O relatório comparativo inclui a variação como terceiro número: não é uma terceira data.
+   for(let i=0;i<results.length;i++){
+    const value=nums[i];if(!Number.isFinite(value))continue;
+    if(results[i].values[key]===undefined)results[i].values[key]=value;
+    else if(Math.abs(results[i].values[key]-value)>.001)results[i].values[key]=null;
+   }
+   break;
   }
-  $('#pdfEvalResult').innerHTML=`<strong>Prévia para conferência</strong><p class="mini">Somente números reconhecidos com segurança aparecem. Confira os valores com os PDFs originais antes de salvar. A comparação de massa muscular só é feita quando a unidade coincide.</p><div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr><th>Medida</th><th>Anterior</th><th>Nova</th><th>Variação</th></tr></thead><tbody>${rows}</tbody></table></div><p class="mini">Datas não identificadas automaticamente podem ser informadas na confirmação.</p><label class="small">Data da avaliação anterior</label><input id="pdfDateOld" type="date" value="${oldEval.data.date||''}"><label class="small">Data da avaliação nova</label><input id="pdfDateNew" type="date" value="${newEval.data.date||''}">`;
+ }
+ return {isComparative,results};
+}
+function valueAt(r,key){return r?.values?.[key]??null}
+function diffPdf(a,b){if(a==null||b==null)return '—';const d=b-a;return (d>0?'+':'')+displayNum(d)}
+$('#pdfEvalAnalyze').onclick=async()=>{
+ const old=$('#pdfEvalOld').files?.[0],recent=$('#pdfEvalNew').files?.[0];
+ pendingPdfEvaluations=null;$('#pdfEvalSave').hidden=true;$('#pdfEvalResult').hidden=true;
+ if(!old||!recent){$('#pdfEvalStatus').textContent='Selecione os dois PDFs.';return}
+ $('#pdfEvalAnalyze').disabled=true;$('#pdfEvalStatus').textContent='Lendo os PDFs. Aguarde...';
+ try{
+  const lib=await pdfJsLibrary();
+  const [oldParsed,newParsed]=await Promise.all([readPdfLines(old,lib).then(l=>parseReport(l,old)),readPdfLines(recent,lib).then(l=>parseReport(l,recent))]);
+  const byDate=new Map();
+  // O PDF individual confirma o primeiro período; o comparativo fornece os dois períodos.
+  for(const record of [...oldParsed.results,...newParsed.results]){
+   const existing=byDate.get(record.date);
+   if(!existing){byDate.set(record.date,{...record,values:{...record.values}});continue}
+   for(const [k,v] of Object.entries(record.values)){
+    if(existing.values[k]===undefined)existing.values[k]=v;
+    else if(v!==null&&existing.values[k]!==null&&Math.abs(existing.values[k]-v)>0.011)throw Error('Os PDFs apresentam valores divergentes para '+k+' em '+record.date+'. Confira os arquivos.');
+   }
+  }
+  const records=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+  if(records.length<2)throw Error('Não foram encontradas duas datas distintas para comparar.');
+  const [a,b]=[records[0],records[records.length-1]];
+  const core=['weight','fat','lean','waist','abdomen','hip','thighR'];
+  if(core.some(k=>valueAt(a,k)===null||valueAt(b,k)===null))throw Error('Uma ou mais medidas essenciais não foram identificadas com segurança. Nenhum dado foi salvo.');
+  pendingPdfEvaluations=[a,b];
+  const rows=pdfMetrics.map(([key,label,unit])=>`<tr><td style="padding:6px">${esc(label)}</td><td>${displayNum(valueAt(a,key))}</td><td>${displayNum(valueAt(b,key))}</td><td>${diffPdf(valueAt(a,key),valueAt(b,key))} ${unit}</td></tr>`).join('');
+  $('#pdfEvalResult').innerHTML=`<strong>Prévia para conferência</strong><p class="mini">${fmtDate(a.date)} → ${fmtDate(b.date)}. Massa magra não é sinônimo de massa muscular isolada. Confira os valores antes de salvar.</p><div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th>Medida</th><th>Anterior</th><th>Nova</th><th>Variação</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   $('#pdfEvalResult').hidden=false;$('#pdfEvalSave').hidden=false;
-  $('#pdfEvalStatus').textContent=`Reconhecidas ${oldEval.count} medidas na anterior e ${newEval.count} na nova. Confira antes de salvar.`;
+  $('#pdfEvalStatus').textContent='Dados extraídos para conferência. Nenhuma avaliação foi salva ainda.';
  }catch(e){$('#pdfEvalStatus').textContent='⚠️ '+e.message}
  finally{$('#pdfEvalAnalyze').disabled=false}
 };
 $('#pdfEvalSave').onclick=()=>{
  if(!pendingPdfEvaluations)return;
- const dates=[$('#pdfDateOld').value,$('#pdfDateNew').value];
- if(dates.some(d=>!d)){alert('Informe as duas datas para salvar.');return}
- if(dates[0]>=dates[1]){alert('A avaliação anterior deve ter uma data anterior à nova.');return}
- const records=pendingPdfEvaluations.map((e,i)=>({id:Date.now()+i,date:dates[i],weight:e.data.weight||'',fat:e.data.fat||'',muscle:e.data.muscle||'',waist:e.data.waist||'',abdomen:e.data.abdomen||'',hip:e.data.hip||'',thighR:e.data.thighR||'',thighL:e.data.thighL||'',armR:e.data.armR||'',armL:e.data.armL||'',goal:'',notes:'Importado automaticamente de '+e.name+'. Conferido antes de salvar. Unidades de massa muscular: '+(e.data.muscleUnit||'não identificada'),attachment:{name:e.name,type:'application/pdf',size:0,data:null}}));
- if(!confirm('Você conferiu os valores nos dois PDFs e deseja salvar as duas avaliações no histórico?'))return;
- evaluations.push(...records);evaluations.sort((a,b)=>a.date.localeCompare(b.date));
- try{saveEvaluations()}catch(e){evaluations.splice(evaluations.length-2,2);alert('Não foi possível salvar no aparelho: '+e.message);return}
- renderEvaluations();$('#compareOld').value=records[0].id;$('#compareNew').value=records[1].id;$('#compareBtn').click();
- $('#pdfEvalStatus').textContent='Duas avaliações salvas no histórico. Os PDFs originais não são armazenados nesta função; guarde seus arquivos.';
- $('#pdfEvalSave').hidden=true;pendingPdfEvaluations=null;
+ const [a,b]=pendingPdfEvaluations;
+ if(!confirm('Salvar as avaliações conferidas de '+fmtDate(a.date)+' e '+fmtDate(b.date)+'? Registros existentes com as mesmas datas serão atualizados.'))return;
+ const original=evaluations.slice();
+ try{
+  for(const r of [a,b]){
+   const old=evaluations.find(e=>e.date===r.date);
+   const get=k=>valueAt(r,k)===null?'':displayNum(valueAt(r,k));
+   const rec={id:old?.id||Date.now()+Math.round(Math.random()*100000),date:r.date,weight:get('weight'),fat:get('fat'),muscle:'',lean:get('lean'),fatKg:get('fatKg'),waist:get('waist'),abdomen:get('abdomen'),hip:get('hip'),thighR:get('thighR'),thighL:'',armR:get('armR'),armL:'',goal:old?.goal||'',notes:'Importação de PDF antropométrico. Massa magra: '+get('lean')+' kg; não corresponde a massa muscular isolada.',attachment:old?.attachment||{name:r.source,type:'application/pdf',data:null}};
+   if(old)Object.assign(old,rec);else evaluations.push(rec);
+  }
+  evaluations.sort((x,y)=>x.date.localeCompare(y.date));saveEvaluations();
+ }catch(e){evaluations.splice(0,evaluations.length,...original);$('#pdfEvalStatus').textContent='Falha ao salvar: '+e.message;return}
+ renderEvaluations();$('#compareOld').value=a.date===b.date?'':evaluations.find(e=>e.date===a.date)?.id;$('#compareNew').value=evaluations.find(e=>e.date===b.date)?.id;$('#compareBtn').click();
+ $('#pdfEvalStatus').textContent='Avaliações salvas/atualizadas. Guarde os PDFs originais.';$('#pdfEvalSave').hidden=true;pendingPdfEvaluations=null;
 };
 renderEvaluations();
 
