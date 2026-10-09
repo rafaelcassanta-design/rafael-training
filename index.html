@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17365D">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Rafael Training Beta 2.2</title>
+<title>Rafael Training Beta 2.3</title>
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--text:#17212b;--muted:#66717d;--border:#d8dee5;--primary:#17365D;--soft:#d9eaf7;--ok:#e9f7ee}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
@@ -40,7 +40,7 @@ select{font:inherit}
 <body>
 <div class="app">
 <div class="top">
-  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 2.2</div></div>
+  <div><div class="eyebrow">Ficha atual</div><h1 id="title"></h1><div class="mini">Beta 2.3</div></div>
   <div class="timer"><div class="eyebrow">Tempo</div><strong id="timer">00:00:00</strong></div>
 </div>
 <div class="tabs"><button class="tab" data-key="A">A</button><button class="tab" data-key="B">B</button><button class="tab" data-key="C">C</button></div>
@@ -448,6 +448,7 @@ function renderEvaluations(){
     c.innerHTML=`<div class="card-title"><div><strong>${fmtDate(r.date)}</strong><div class="mini">Peso: ${esc(r.weight)||'—'} | Gordura: ${esc(r.fat)||'—'} | Massa muscular: ${esc(r.muscle)||'—'} | Massa magra: ${esc(r.lean)||'—'}</div></div><button data-del="${r.id}" style="min-height:36px;padding:6px 9px">Excluir</button></div>
     <div class="mini" style="margin-top:6px">Cintura ${esc(r.waist)||'—'} | Abdômen ${esc(r.abdomen)||'—'} | Quadril ${esc(r.hip)||'—'}</div>
     <div class="mini">Coxa D/E ${esc(r.thighR)||'—'} / ${esc(r.thighL)||'—'} | Braço D/E ${esc(r.armR)||'—'} / ${esc(r.armL)||'—'}</div>
+    ${r.pdfMetrics?.thighFold?`<div class="mini">Prega cutânea da coxa: ${esc(r.pdfMetrics.thighFold)} mm</div>`:''}
     ${r.goal?`<div style="margin-top:8px"><strong>Objetivo:</strong> ${esc(r.goal)}</div>`:''}
     ${r.notes?`<div class="mini" style="margin-top:6px">${esc(r.notes)}</div>`:''}
     ${r.attachment?.name?`<div class="mini" style="margin-top:6px">Anexo: ${esc(r.attachment.name)}${r.attachment.data?' (salvo localmente)':' (somente referência)'}</div>`:''}`;
@@ -542,7 +543,14 @@ function parseReport(lines,file){
  for(const {text:line} of lines){
   for(const [key,label,unit,re] of pdfMetrics){
    const m=line.match(re);if(!m)continue;
-   const after=line.slice(m[0].length);const nums=(after.match(valRe)||[]).map(asNum);
+   // Linhas de PDFs individuais podem conter duas medidas lado a lado.
+   // Ex.: 'Tórax 14,00 mm Coxa 36,00 mm'. Não pegar números de outra medida.
+   let after=line.slice(m[0].length);
+   if(!isComparative){
+    const nextLabel=after.search(/\b(?:Altura|Peso|Cintura|Abd[oô]men|Quadril|Pesco[cç]o|Coxa(?:\s+direita)?|Bra[cç]o relaxado direito|B[ií]ceps|Tr[ií]ceps|Axilar M[eé]dia|T[oó]rax|Suprail[ií]aca|Subescapular|Abdominal)\s+\d/i);
+    if(nextLabel>=0)after=after.slice(0,nextLabel);
+   }
+   const nums=(after.match(valRe)||[]).map(asNum);
    if(nums.length<(isComparative?2:1))continue;
    // O relatório comparativo inclui a variação como terceiro número: não é uma terceira data.
    for(let i=0;i<results.length;i++){
@@ -571,14 +579,20 @@ $('#pdfEvalAnalyze').onclick=async()=>{
    const existing=byDate.get(record.date);
    if(!existing){byDate.set(record.date,{...record,values:{...record.values}});continue}
    for(const [k,v] of Object.entries(record.values)){
-    if(existing.values[k]===undefined)existing.values[k]=v;
-    else if(v!==null&&existing.values[k]!==null&&Math.abs(existing.values[k]-v)>0.011)throw Error('Os PDFs apresentam valores divergentes para '+k+' em '+record.date+'. Confira os arquivos.');
+    if(existing.values[k]===undefined || existing.values[k]===null)existing.values[k]=v;
+    else if(v!==null&&Math.abs(existing.values[k]-v)>0.011){
+     // Relatório comparativo traz a prega da coxa em coluna inequívoca.
+     // A Beta 2.2 confundia a prega da coxa com a do bíceps na ficha individual.
+     if(k==='thighFold' && newParsed.isComparative && record.source===recent.name){
+       existing.values[k]=v;
+     }else throw Error('Os PDFs apresentam valores divergentes para '+k+' em '+record.date+'. Confira os arquivos.');
+    }
    }
   }
   const records=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
   if(records.length<2)throw Error('Não foram encontradas duas datas distintas para comparar.');
   const [a,b]=[records[0],records[records.length-1]];
-  const core=['weight','fat','lean','waist','abdomen','hip','thighR'];
+  const core=['weight','fat','lean','waist','abdomen','hip','thighR','thighFold'];
   if(core.some(k=>valueAt(a,k)===null||valueAt(b,k)===null))throw Error('Uma ou mais medidas essenciais não foram identificadas com segurança. Nenhum dado foi salvo.');
   pendingPdfEvaluations=[a,b];
   const rows=pdfMetrics.map(([key,label,unit])=>`<tr><td style="padding:6px">${esc(label)}</td><td>${displayNum(valueAt(a,key))}</td><td>${displayNum(valueAt(b,key))}</td><td>${diffPdf(valueAt(a,key),valueAt(b,key))} ${unit}</td></tr>`).join('');
@@ -597,13 +611,13 @@ $('#pdfEvalSave').onclick=()=>{
   for(const r of [a,b]){
    const old=evaluations.find(e=>e.date===r.date);
    const get=k=>valueAt(r,k)===null?'':displayNum(valueAt(r,k));
-   const rec={id:old?.id||Date.now()+Math.round(Math.random()*100000),date:r.date,weight:get('weight'),fat:get('fat'),muscle:'',lean:get('lean'),fatKg:get('fatKg'),waist:get('waist'),abdomen:get('abdomen'),hip:get('hip'),thighR:get('thighR'),thighL:'',armR:get('armR'),armL:'',goal:old?.goal||'',notes:'Importação de PDF antropométrico. Massa magra: '+get('lean')+' kg; não corresponde a massa muscular isolada.',attachment:old?.attachment||{name:r.source,type:'application/pdf',data:null}};
+   const rec={id:old?.id||Date.now()+Math.round(Math.random()*100000),date:r.date,weight:get('weight'),fat:get('fat'),muscle:'',lean:get('lean'),fatKg:get('fatKg'),pdfMetrics:Object.fromEntries(pdfMetrics.map(([key])=>[key,get(key)])),waist:get('waist'),abdomen:get('abdomen'),hip:get('hip'),thighR:get('thighR'),thighL:'',armR:get('armR'),armL:'',goal:old?.goal||'',notes:'Importação de PDF antropométrico. Massa magra: '+get('lean')+' kg; não corresponde a massa muscular isolada.',attachment:old?.attachment||{name:r.source,type:'application/pdf',data:null}};
    if(old)Object.assign(old,rec);else evaluations.push(rec);
   }
   evaluations.sort((x,y)=>x.date.localeCompare(y.date));saveEvaluations();
  }catch(e){evaluations.splice(0,evaluations.length,...original);$('#pdfEvalStatus').textContent='Falha ao salvar: '+e.message;return}
  renderEvaluations();$('#compareOld').value=a.date===b.date?'':evaluations.find(e=>e.date===a.date)?.id;$('#compareNew').value=evaluations.find(e=>e.date===b.date)?.id;$('#compareBtn').click();
- $('#pdfEvalStatus').textContent='Avaliações salvas/atualizadas. Guarde os PDFs originais.';$('#pdfEvalSave').hidden=true;pendingPdfEvaluations=null;
+ $('#pdfEvalStatus').textContent='Avaliações salvas/atualizadas, inclusive correção da prega da coxa em registros da Beta 2.2. Guarde os PDFs originais.';$('#pdfEvalSave').hidden=true;pendingPdfEvaluations=null;
 };
 renderEvaluations();
 
